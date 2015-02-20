@@ -446,14 +446,15 @@ class ManipulatableFanItem extends FanItem {
 
 class RemovableFanItem extends DraggableFanItem {
     public oldTrans : Trans;
-    constructor(el : HTMLElement, public fan : Fan, public distance : number) {
+    constructor(el : HTMLElement, public fan : Fan) {
 	super(el);
     }
 
     onMove(ev : HammerInput) {
 	super.onMove(ev);
-	this.el.style.opacity = String(1-(ev.distance/this.distance));
-	if (ev.distance >= this.distance) {
+	var distance = this.el.offsetWidth;
+	this.el.style.opacity = String(1-(ev.distance/distance));
+	if (ev.distance >= distance) {
 	    this.mc.destroy();
 	    this.fan.removeItem(this);
 	}
@@ -598,7 +599,7 @@ class Buttons {
 	    button.onclick = () => {
 		var el = document.createElement("div");
 		el.classList.add("fanItem");
-		var item = new RemovableFanItem(el, fan, 100);
+		var item = new RemovableFanItem(el, fan);
 		fan.addItem(item);
 	    };
 	    
