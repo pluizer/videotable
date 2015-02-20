@@ -476,13 +476,15 @@ class Fan {
     items : FanItem[] = [];
     itemsPlaced : number = 0;
     el : HTMLElement = document.createElement("div");
+    _maxItems : number;
     constructor(
 	public lineFunc : (length : number) => Trans[],
-	public maxItems : number,
+	maxItems : number,
 	public onFull? : (fan : Fan) => any,
 	public onRoomAgain? : (fan : Fan) => any,
 	public animationInterval : number = 20,
 	public animationSteps : number = 20) {
+	this._maxItems = maxItems;
     }
     
     private placeItems(onPlaced? : () => any)
@@ -520,7 +522,7 @@ class Fan {
 	this.items = this.items.filter((b) => item !== b);
 	this.el.removeChild(item.el);
 	this.placeItems();
-	if (this.items.length == this.maxItems-1) {
+	if (this.isFull()) {
 	    if (this.onRoomAgain) this.onRoomAgain(this);
 	}
     }
@@ -540,6 +542,24 @@ class Fan {
     : void {
 	this.lineFunc = func;
 	this.placeItems(onPlaced);
+    }
+
+    isFull()
+    : boolean {
+	return this.items.length >= this.maxItems-1;
+    }
+    
+    set maxItems(v : number) {
+	var wasFull = this.isFull();
+	this._maxItems = v;
+	if (wasFull && ! this.isFull()) {
+	    if (this.onRoomAgain) this.onRoomAgain(this);
+	}
+    }
+
+    get maxItems()
+    : number {
+	return this._maxItems;
     }
 
     
