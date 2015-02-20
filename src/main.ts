@@ -315,7 +315,7 @@ class VideoPlayer {
 	    el,
 	    VideoPlayer.video.src,
 	    VideoPlayer.video.currentTime);
-	// TODO: Hmmmm.....
+	// TODO: Hmmmm....
 	player.deactivate();
 	oldPlayer.activate();
 	return player;
