@@ -13,6 +13,64 @@ function fireNewEvent(
     el.dispatchEvent(event);
 }
 
+function assert(condition, message) {
+    if (!condition) {
+        message = message || "Assertion failed";
+        if (typeof Error !== "undefined") {
+            throw new Error(message);
+        }
+        throw message; // Fallback
+    }
+}
+
+////////////////////////////////
+// Positions
+////////////////////////////////
+
+class Positions {
+
+    static topLeft(el : HTMLElement, parent : HTMLElement)
+    : Trans {
+	return new Trans(0, 0, 0, 1, 1);
+    }
+    static topCenter(el : HTMLElement, parent : HTMLElement)
+    : Trans {
+	var w  = parent.offsetWidth;
+	var bW = el.offsetWidth;
+	var cW = bW/2;
+	return new Trans((w/2)-cW, 0, 1, 1);
+    }
+    static topRight(el : HTMLElement, parent : HTMLElement)
+    : Trans {
+	var w  = parent.offsetWidth;
+	var bW = el.offsetWidth;
+	return new Trans(w-bW, 0, 0, 1, 1);
+    }
+    static bottomLeft(el : HTMLElement, parent : HTMLElement)
+    : Trans {
+	var bH = el.offsetHeight;
+	var h  = parent.offsetHeight;
+	return new Trans(0, h-bH, 0, 1, 1);
+    }
+    static bottomCenter(el : HTMLElement, parent : HTMLElement)
+    : Trans {
+	var bH = el.offsetHeight;
+	var h  = parent.offsetHeight;       
+	var w  = parent.offsetWidth;
+	var bW = el.offsetWidth;
+	var cW = bW/2;
+	return new Trans((w/2)-cW, h-bH, 0, 1, 1);
+    }
+    static bottomRight(el : HTMLElement, parent : HTMLElement)
+    : Trans {
+	var bH = el.offsetHeight;
+	var h  = parent.offsetHeight;       
+	var w  = parent.offsetWidth;
+	var bW = el.offsetWidth;
+	return new Trans(w-bW, h-bH, 0, 1, 1);
+    }
+}
+    
 ////////////////////////////////
 // App
 ////////////////////////////////
@@ -273,7 +331,7 @@ class RemovableMenuItem extends MenuItem {
 	    panStartTrans = this.transf.current;
 	});
 	mc.on("panmove", (ev) => {
-                                         	    this.transf.translate(new Trans(ev.deltaX, 0).add(panStartTrans));
+            this.transf.translate(new Trans(ev.deltaX, 0).add(panStartTrans));
 	    var w = this.el.offsetWidth;
 	    this.el.style.opacity = String( 1 - ((1/w)*ev.deltaX) );
 	    if (ev.deltaX > w) {
@@ -473,10 +531,13 @@ class RemovableFanItem extends DraggableFanItem {
 }
 
 class Fan {
+
     items : FanItem[] = [];
     itemsPlaced : number = 0;
     el : HTMLElement = document.createElement("div");
     _maxItems : number;
+    _lineFunc : (length : number) => Trans[];
+
     constructor(
 	public lineFunc : (length : number) => Trans[],
 	maxItems : number,
@@ -561,7 +622,6 @@ class Fan {
     : number {
 	return this._maxItems;
     }
-
     
 }
 
@@ -597,82 +657,147 @@ function makeCircleFunc(radius : number,
 }
 
 ////////////////////////////////
+// FanButton
+////////////////////////////////
+
+class FanButton {
+
+    el : HTMLElement;
+    transf : Transformable;
+    fan : Fan;
+    
+    constructor(
+	public parent : HTMLElement,
+	public transFunc : (el : HTMLElement, parent : HTMLElement) => Trans,
+	public radiusRatio : number,
+	public fromAngle : number,
+	public toAngle : number,
+	public maxItems : number
+    ) {
+	assert(fromAngle < toAngle, "fromAngle < toAngle");
+	this.el = document.createElement("div");
+	this.el.classList.add("button");
+	this.parent.appendChild(this.el);
+	this.transf = new Transformable(this.el);
+	this.fan = new Fan(
+	    this.fanCircleFunc(),
+	    maxItems
+	);
+	this.parent.appendChild(this.fan.el);
+	window.addEventListener("resize", () => {
+	    this.place();
+	});
+	this.place();
+	/* TODO: Implement as methods */
+	this.el.onclick = () => {
+	    var el = document.createElement("div");
+	    el.classList.add("fanItem");
+	    var item = new RemovableFanItem(el, this.fan);
+	    this.fan.addItem(item);
+	};
+    }
+    
+    private fanCircleFunc()
+    : (length : number) => Trans[] {
+	return makeCircleFunc(
+	    this.el.offsetWidth * this.radiusRatio,
+	    (this.maxItems-1) * (360 / (this.fromAngle - this.toAngle)),
+	    this.fromAngle
+	);
+    }
+
+    private place()
+    : void {
+	this.transf.translate(this.transFunc(this.el, this.parent));
+	this.fan.swapLineFunc(this.fanCircleFunc());	
+    }
+};
+
+////////////////////////////////
 // Buttons
 ////////////////////////////////
 
-class Buttons {
+// class Buttons {
 
-    buttons : HTMLElement[];
-    trs : Transformable[];
-    fans : Fan[];
+//     buttons : HTMLElement[];
+//     trs : Transformable[];
+//     fans : Fan[];
     
-    constructor(public el : HTMLElement) {
-	this.buttons = [].slice.call(el.getElementsByClassName("button"));
-	this.trs = this.buttons.map((button) => new Transformable(button));
-	this.placeButtons();
-	window.addEventListener("resize", () => {
-	    this.placeButtons();
-	});
-	this.buttons.forEach((button, i) => {
-	    var fan = new Fan(makeCircleFunc(100, 40, 0), 10);
-	    this.el.appendChild(fan.el);
-	    button.onclick = () => {
-		var el = document.createElement("div");
-		el.classList.add("fanItem");
-		var item = new RemovableFanItem(el, fan);
-		fan.addItem(item);
-	    };
+//     constructor(public el : HTMLElement) {
+// 	this.buttons = [].slice.call(el.getElementsByClassName("button"));
+// 	this.trs = this.buttons.map((button) => new Transformable(button));
+// 	this.placeButtons();
+// 	window.addEventListener("resize", () => {
+// 	    this.placeButtons();
+// 	});
+// 	this.buttons.forEach((button, i) => {
+// 	    var fan = new Fan(makeCircleFunc(100, 40, 0), 10);
+// 	    this.el.appendChild(fan.el);
+// 	    button.onclick = () => {
+// 		var el = document.createElement("div");
+// 		el.classList.add("fanItem");
+// 		var item = new RemovableFanItem(el, fan);
+// 		fan.addItem(item);
+// 	    };
 	    
-	});
-    }
+// 	});
+//     }
 
-    placeButtons() {
-	var positions = this.positions();
-	this.trs.forEach((tr, i) => {
-	    var x = positions[i][0];
-	    var y = positions[i][1];
-	    tr.translate(new Trans(x, y, 0, 1, 1));
-	});
-    }
+//     placeButtons() {
+// 	var positions = this.positions();
+// 	this.trs.forEach((tr, i) => {
+// 	    var x = positions[i][0];
+// 	    var y = positions[i][1];
+// 	    tr.translate(new Trans(x, y, 0, 1, 1));
+// 	});
+//     }
     
-    positions() {
-	var bW = this.buttons[0].offsetWidth;
-	var bH = this.buttons[0].offsetHeight;
-	var cW = bW/2;
-	var cH = bH/2;
-	var w  = this.el.offsetWidth;
-	var h  = this.el.offsetHeight;       
-	return [
-	    // Top left
-	    [0, 0],
-	    // Top center
-	    [(w/2)-cW, 0],
-	    // Top right
-	    [w-bW, 0],
-	    // Bottom left
-	    [0, h-bH],
-	    // Bottom center
-	    [(w/2)-cW, h-bH],
-	    // Bottom right
-	    [w-bW, h-bH]
-	];
-    }
-    
-}
+//     positions() {
+// 	var bW = this.buttons[0].offsetWidth;
+// 	var bH = this.buttons[0].offsetHeight;
+// 	var cW = bW/2;
+// 	var cH = bH/2;
+// 	var w  = this.el.offsetWidth;
+// 	var h  = this.el.offsetHeight;       
+// 	return [
+// 	    // Top left
+// 	    [0, 0],
+// 	    // Top center
+// 	    [(w/2)-cW, 0],
+// 	    // Top right
+// 	    [w-bW, 0],
+// 	    // Bottom left
+// 	    [0, h-bH],
+// 	    // Bottom center
+// 	    [(w/2)-cW, h-bH],
+// 	    // Bottom right
+// 	    [w-bW, h-bH]
+// 	];
+//     }
+
+// }
 
 ////////////////////////////////
 // Test
 ////////////////////////////////
 
 
- window.onload = () => {
+window.onload = () => {
     var el = document.getElementById("upload");
     var menu = new VideoMenu(el);
     menu.addItem(new RemovableMenuItem("Test", "", menu));
 
-     menu.el.addEventListener("error", (event) => {
+    menu.el.addEventListener("error", (event) => {
 	console.log((<any>event).detail);
     });
 
-    new Buttons(document.getElementById("stage"));
- };
+    var buttons = document.getElementById("buttons");
+
+    var fanButton = new FanButton(buttons, Positions.topLeft, 1, 180, 360, 5);
+    buttons.appendChild(fanButton.el);
+
+    var fanButton2 = new FanButton(buttons, Positions.topRight, 1, 180, 360, 5);
+    buttons.appendChild(fanButton2.el);
+
+    //    new Buttons(document.getElementById("stage"));
+};
