@@ -50,9 +50,18 @@ body {
     width: 10vw;
     height: 10vw;
     background-color: green;
+    pointer-events: auto;
+}
+
+.fanItem {
+    position: absolute;
+    width: 10vw;
+    height: 10vw;
     user-select: none;
     -webkit-user-select: none;
     pointer-events: auto;
+    background-color: orange;
+    z-index: 3;
 }
 
 .menuItem {
