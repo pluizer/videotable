@@ -308,6 +308,18 @@ class VideoPlayer {
 	VideoPlayer.video.pause();
     }
 
+    static videoSnapshot(el : HTMLElement) 
+    : VideoPlayer {
+	var oldPlayer = VideoPlayer.activePlayer;
+	var player = new VideoPlayer(
+	    el,
+	    VideoPlayer.video.src,
+	    VideoPlayer.video.currentTime);
+	// TODO: Hmmmm.....
+	player.deactivate();
+	oldPlayer.activate();
+	return player;
+    }
 }
 
 ////////////////////////////////
@@ -751,6 +763,7 @@ class FanButton {
 	/* TODO: Implement as methods */
 	this.el.onclick = () => {
 	    var el = document.createElement("div");
+	    var player = VideoPlayer.videoSnapshot(el);
 	    /**/
 	    el.classList.add("fanItem");
 
@@ -766,13 +779,13 @@ class FanButton {
 	    }, 500);
 	    this.fan.addItem(item);
 
-	    VideoPlayer.snapshot(null, null, (image) => {
-		/* FIXME: Snapshot test, implement better ... */
-		el.style.backgroundImage = "url(" + image + ")";
-		el.style.backgroundRepeat = "no-repeat";
-		el.style.backgroundSize = "100%";
-		el.style.backgroundPosition = "center";
-	    });
+	    // /* FIXME: Snapshot test, implement better ... */
+	    // VideoPlayer.snapshot(null, null, (image) => {
+	    // 	el.style.backgroundImage = "url(" + image + ")";
+	    // 	el.style.backgroundRepeat = "no-repeat";
+	    // 	el.style.backgroundSize = "100%";
+	    // 	el.style.backgroundPosition = "center";
+	    // });
 
 	};
     }
