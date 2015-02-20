@@ -391,58 +391,6 @@ class VideoMenu extends Menu {
 }
 
 ////////////////////////////////
-// 
-////////////////////////////////
-
-class Buttons {
-
-    buttons : HTMLElement[];
-     trs : Transformable[];
-
-    constructor(public el : HTMLElement) {
-	this.buttons = [].slice.call(el.getElementsByClassName("button"));
-	this.trs = this.buttons.map((button) => new Transformable(button));
-	this.placeButtons();
-	window.addEventListener("resize", () => {
-	    this.placeButtons();
-	});
-    }
-
-    placeButtons() {
-	var positions = this.positions();
-	this.trs.forEach((tr, i) => {
-	    var x = positions[i][0];
-	    var y = positions[i][1];
-	    tr.translate(new Trans(x, y, 0, 1, 1));
-	});
-    }
-    
-    positions() {
-	var bW = this.buttons[0].offsetWidth;
-	var bH = this.buttons[0].offsetHeight;
-	var cW = bW/2;
-	var cH = bH/2;
-	var w  = this.el.offsetWidth;
-	var h  = this.el.offsetHeight;       
-	return [
-	    // Top left
-	    [0, 0],
-	    // Top center
-	    [(w/2)-cW, 0],
-	    // Top right
-	    [w-bW, 0],
-	    // Bottom left
-	    [0, h-bH],
-	    // Bottom center
-	    [(w/2)-cW, h-bH],
-	    // Bottom right
-	    [w-bW, h-bH]
-	];
-    }
-    
-}
-
-////////////////////////////////
 // Fan
 ////////////////////////////////
 
@@ -625,6 +573,70 @@ function makeCircleFunc(radius : number,
 	}
 	return transs;
     }
+}
+
+////////////////////////////////
+// Buttons
+////////////////////////////////
+
+class Buttons {
+
+    buttons : HTMLElement[];
+    trs : Transformable[];
+    fans : Fan[];
+    
+    constructor(public el : HTMLElement) {
+	this.buttons = [].slice.call(el.getElementsByClassName("button"));
+	this.trs = this.buttons.map((button) => new Transformable(button));
+	this.placeButtons();
+	window.addEventListener("resize", () => {
+	    this.placeButtons();
+	});
+	this.buttons.forEach((button, i) => {
+	    var fan = new Fan(makeCircleFunc(100, 40, 0), 10);
+	    this.el.appendChild(fan.el);
+	    button.onclick = () => {
+		var el = document.createElement("div");
+		el.classList.add("fanItem");
+		var item = new RemovableFanItem(el, fan, 100);
+		fan.addItem(item);
+	    };
+	    
+	});
+    }
+
+    placeButtons() {
+	var positions = this.positions();
+	this.trs.forEach((tr, i) => {
+	    var x = positions[i][0];
+	    var y = positions[i][1];
+	    tr.translate(new Trans(x, y, 0, 1, 1));
+	});
+    }
+    
+    positions() {
+	var bW = this.buttons[0].offsetWidth;
+	var bH = this.buttons[0].offsetHeight;
+	var cW = bW/2;
+	var cH = bH/2;
+	var w  = this.el.offsetWidth;
+	var h  = this.el.offsetHeight;       
+	return [
+	    // Top left
+	    [0, 0],
+	    // Top center
+	    [(w/2)-cW, 0],
+	    // Top right
+	    [w-bW, 0],
+	    // Bottom left
+	    [0, h-bH],
+	    // Bottom center
+	    [(w/2)-cW, h-bH],
+	    // Bottom right
+	    [w-bW, h-bH]
+	];
+    }
+    
 }
 
 ////////////////////////////////
