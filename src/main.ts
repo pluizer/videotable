@@ -23,12 +23,54 @@ function assert(condition, message) {
     }
 }
 
+function launchIntoFullscreen(element) {
+  if(element.requestFullscreen) {
+    element.requestFullscreen();
+  } else if(element.mozRequestFullScreen) {
+    element.mozRequestFullScreen();
+  } else if(element.webkitRequestFullscreen) {
+    element.webkitRequestFullscreen();
+  } else if(element.msRequestFullscreen) {
+    element.msRequestFullscreen();
+  }
+}
+
+function exitFullscreen() {
+    if((<any>document).exitFullscreen) {
+	(<any>document).exitFullscreen();
+    } else if((<any>document).mozCancelFullScreen) {
+	(<any>document).mozCancelFullScreen();
+    } else if((<any>document).webkitExitFullscreen) {
+	(<any>document).webkitExitFullscreen();
+  }
+}
+
+function sub(v, min, max) {
+    if (v < min) return min;
+    if (v > max) return max;
+    return v;
+}
+
+function subAbs(v, r) {
+    return sub(v, -Math.abs(r), Math.abs(r));
+}
+
+
 ////////////////////////////////
 // Positions
 ////////////////////////////////
 
 class Positions {
 
+    static positions = [
+	Positions.topLeft,
+	Positions.topCenter,
+	Positions.topRight,
+	Positions.bottomLeft,
+	Positions.bottomCenter,
+	Positions.bottomRight
+    ];
+    
     static topLeft(el : HTMLElement, parent : HTMLElement)
     : Trans {
 	return new Trans(0, 0, 0, 1, 1);
@@ -38,7 +80,7 @@ class Positions {
 	var w  = parent.offsetWidth;
 	var bW = el.offsetWidth;
 	var cW = bW/2;
-	return new Trans((w/2)-cW, 0, 1, 1);
+	return new Trans((w/2)-cW, 0, 0, 1, 1);
     }
     static topRight(el : HTMLElement, parent : HTMLElement)
     : Trans {
@@ -300,6 +342,7 @@ class MenuItem {
 	mc.add(new Hammer.Tap());
 	var downTime = false; // Have some downtime before being able to refire.
 	mc.on("tap", (ev) => {
+	    ev.preventDefault();
 	    if (!downTime) {
 		fireNewEvent("tap", this.el);
 		setTimeout(() => {
@@ -326,22 +369,23 @@ class RemovableMenuItem extends MenuItem {
 	var panStartTrans : Trans;
 
 	var mc = this.mc;
-	mc.add(new Hammer.Pan());
-	mc.on("panstart", (ev) => {
+	this.mc.add(new Hammer.Pan({preventDefault: true}));
+	this.mc.on("panstart", (ev) => {
 	    panStartTrans = this.transf.current;
 	});
-	mc.on("panmove", (ev) => {
+	this.mc.on("panmove", (ev) => {
             this.transf.translate(new Trans(ev.deltaX, 0).add(panStartTrans));
 	    var w = this.el.offsetWidth;
 	    this.el.style.opacity = String( 1 - ((1/w)*ev.deltaX) );
-	    if (ev.deltaX > w) {
-		mc.destroy();
-		this.menu.removeItem(this);
-	    }
 	});
-	mc.on("panend pancancel", (ev) => {
+	this.mc.on("panend pancancel", (ev) => {
 	    this.el.style.opacity = String(1);
 	    this.transf.translate(new Trans(0, 0, 0, 1, 1));
+	    var w = this.el.offsetWidth;
+	    if (ev.deltaX > w) {
+		this.mc.destroy();
+		this.menu.removeItem(this);
+	    }
 	});
     }
 }
@@ -379,7 +423,7 @@ class Menu {
     : boolean {
 	if (this.items.indexOf(item) > -1) {
 	    this.items = this.items.filter((x : MenuItem) => (x !== item));
-	    this.el.removeChild(item.el);
+	    item.el.parentNode.removeChild(item.el);
 	    fireNewEvent("removedItem", this.el, {item: item});
 	    return true;
 	}
@@ -429,6 +473,13 @@ class VideoMenu extends Menu {
 	var player = new VideoPlayer(document.createElement("div"), url, 10);
 	player.play(() => {
 	    var item = new VideoItem(label, "", this);
+	    item.el.addEventListener("tap", () => {
+		console.log("Video tapped!");
+		// FIXME: Just a test...
+		var el = document.getElementById("video");
+		var player = new VideoPlayer(el, url, 0);
+		player.play();
+	    });
 	    super.addItem(item);
 	    VideoPlayer.snapshot(null, null, (image) => {
 		var el = item.el;
@@ -445,6 +496,7 @@ class VideoMenu extends Menu {
 	    // FIXME, does not fire.
 	    fireNewEvent("error", this.el, {url: url})
 	});
+	
     }
 }
 
@@ -453,80 +505,82 @@ class VideoMenu extends Menu {
 ////////////////////////////////
 
 class FanItem {
+
     transf : Transformable;
+
     constructor(public el : HTMLElement) {
 	this.transf = new Transformable(el);
     }
-}
-
-class DraggableFanItem extends FanItem {
-    mc : HammerManager;
-    constructor(el : HTMLElement) {
-	super(el);
-	var mc = new Hammer.Manager(el, {
-	    preventDefault: true
-	});
-	mc.add(new Hammer.Pan());
-	var that = this;
-	var panStartTrans : Trans;
-	mc.on("panstart", function(ev) {
-	    ev.preventDefault();
-	    panStartTrans = that.transf.current;
-	    that.onStart(ev);
-	});
-	mc.on("panmove", function(ev) {
-	    ev.preventDefault();
-	    that.transf.translate(new Trans(ev.deltaX, ev.deltaY).add(panStartTrans));
-	    that.onMove(ev);
-	});
-	mc.on("panend pancancel", function(ev) {
-	    ev.preventDefault();
-	    that.onEnd(ev);
-	});
-	this.mc = mc;
-    }
-
-    onStart(ev : HammerInput)
-    : void {
-    }
     
-    onMove(ev : HammerInput)
-    : void {
-    }
-
-    onEnd(ev : HammerInput)
-    : void {
+    onPlaced() {
     }
 }
 
 class ManipulatableFanItem extends FanItem {
+
+    mc : HammerManager;
+    
+    constructor(el : HTMLElement) {
+	super(el);
+    }
+   
+    onPlaced() {
+	this.mc = new Hammer.Manager(this.el, {
+	    preventDefault: true
+	});
+	// Panning
+	//	this.mc.add(new Hammer.Pan());
+	this.mc.add(new Hammer.Rotate());
+	this.mc.add(new Hammer.Pinch());
+	var panStartTrans : Trans;
+	this.mc.on("rotatestart pinchstart", (ev) => {
+	    panStartTrans = this.transf.current;
+	});
+	this.mc.on("rotatemove pinchmove", (ev) => {
+	    this.transf.translate(
+		new Trans(panStartTrans.px + ev.deltaX,
+			  panStartTrans.py + ev.deltaY,
+			  panStartTrans.angle + ev.rotation,
+			  panStartTrans.sx * ev.scale,
+			  panStartTrans.sy * ev.scale));
+	});
+	this.mc.on("rotateend rotatecancel pinchend pinchcancel", (ev) => {
+	});
+    }
 }
 
-class RemovableFanItem extends DraggableFanItem {
-    public oldTrans : Trans;
+class RemovableFanItem extends FanItem {
+
+    mc : HammerManager;
+
     constructor(el : HTMLElement, public fan : Fan) {
 	super(el);
     }
 
-    onMove(ev : HammerInput) {
-	super.onMove(ev);
-	var distance = this.el.offsetWidth;
-	this.el.style.opacity = String(1-(ev.distance/distance));
-	if (ev.distance >= distance) {
-	    this.mc.destroy();
-	    this.fan.removeItem(this);
-	}
-    }
+    onPlaced() {
+	this.mc = new Hammer.Manager(this.el, {
+	    preventDefault: true
+	});
+	this.mc.add(new Hammer.Pan());
+	var panStartTrans : Trans;
+	this.mc.on("panstart", (ev) => {
+	    panStartTrans = this.transf.current;
+	});
+	this.mc.on("panmove", (ev) => {
+	    this.transf.translate(new Trans(ev.deltaX, ev.deltaY).add(panStartTrans));
+	    var distance = this.el.offsetWidth;
+	    this.el.style.opacity = String(1-(ev.distance/distance));
+	});
+	this.mc.on("panend pancancel", (ev) => {
+	    var distance = this.el.offsetWidth;
+	    this.el.style.opacity = "1";
+	    this.transf.translate(panStartTrans);
 
-    onStart(ev : HammerInput)
-    : void {
-	this.oldTrans = this.transf.current;
-    }
-    
-    onEnd(ev : HammerInput)
-    : void {
-	this.el.style.opacity = "1";
-	this.transf.translate(this.oldTrans);
+	    if (ev.distance >= distance) {
+		this.mc.destroy();
+		this.fan.removeItem(this);
+	    }
+	});
     }
 }
 
@@ -559,6 +613,7 @@ class Fan {
 				that.animationSteps,
 				that.animationInterval,
 				function (transf : Transformable) {
+				    item.onPlaced();
 				    that.itemsPlaced++;
 				    if (that.itemsPlaced == that.items.length
 					&& onPlaced) onPlaced();
@@ -581,7 +636,9 @@ class Fan {
     removeItem(item : FanItem)
     : void {
 	this.items = this.items.filter((b) => item !== b);
-	this.el.removeChild(item.el);
+	if (item.el.parentElement) {
+	    item.el.parentElement.removeChild(item.el);
+	}
 	this.placeItems();
 	if (this.isFull()) {
 	    if (this.onRoomAgain) this.onRoomAgain(this);
@@ -591,10 +648,11 @@ class Fan {
     swapItem(oldItem : FanItem, newItem : FanItem)
     : boolean {
 	this.items = this.items.map((item) => item === oldItem ? newItem : item);
-	this.el.removeChild(oldItem.el);
+	oldItem.el.parentElement.removeChild(oldItem.el);
 	this.el.appendChild(newItem.el);
 	// Keeps animating after swap, FIXME: Steps will be off.
 	newItem.transf.translate(oldItem.transf.target);
+	newItem.onPlaced();
 	return true;
     }
     
@@ -665,11 +723,13 @@ class FanButton {
     el : HTMLElement;
     transf : Transformable;
     fan : Fan;
+    expanded : boolean = false;
     
     constructor(
 	public parent : HTMLElement,
 	public transFunc : (el : HTMLElement, parent : HTMLElement) => Trans,
 	public radiusRatio : number,
+	public expandedRadiusRatio : number,
 	public fromAngle : number,
 	public toAngle : number,
 	public maxItems : number
@@ -691,19 +751,66 @@ class FanButton {
 	/* TODO: Implement as methods */
 	this.el.onclick = () => {
 	    var el = document.createElement("div");
+	    /**/
 	    el.classList.add("fanItem");
+
 	    var item = new RemovableFanItem(el, this.fan);
+	    // Make appear come from the center of the stage...
+	    var centerX = (this.parent.offsetWidth /2)-(this.el.offsetWidth /2);
+	    var centerY = (this.parent.offsetHeight/2)-(this.el.offsetHeight/2);
+	    item.transf.translate(new Trans(centerX, centerY, 0, 1, 1));
+	    // Make elements slowly fade in...
+	    el.style.opacity = "0.0";
+	    $(el).animate({
+		opacity: "1.0"
+	    }, 500);
 	    this.fan.addItem(item);
+
+	    VideoPlayer.snapshot(null, null, (image) => {
+		/* FIXME: Snapshot test, implement better ... */
+		el.style.backgroundImage = "url(" + image + ")";
+		el.style.backgroundRepeat = "no-repeat";
+		el.style.backgroundSize = "100%";
+		el.style.backgroundPosition = "center";
+	    });
+
 	};
+    }
+
+    expand() {
+	if (!this.expanded) {
+	    this.expanded = true;
+	    this.el.onclick = null;
+	    this.fan.swapLineFunc(
+		this.fanCircleFunc(), () => {
+		    this.fan.items.forEach((item) => {
+			var el = document.createElement("div");
+			el.classList.add("fanItem");
+			var newItem = new ManipulatableFanItem(el);
+			this.fan.swapItem(item, newItem);
+		    });
+		}
+	    );
+	}
     }
     
     private fanCircleFunc()
     : (length : number) => Trans[] {
-	return makeCircleFunc(
-	    this.el.offsetWidth * this.radiusRatio,
+	var radiusRatio = this.expanded ? this.expandedRadiusRatio : this.radiusRatio;
+	var func =  makeCircleFunc(
+	    this.el.offsetWidth * radiusRatio,
 	    (this.maxItems-1) * (360 / (this.fromAngle - this.toAngle)),
 	    this.fromAngle
 	);
+	return (length : number) : Trans[] => {
+	    var ret = func(length);
+	    var ttrans = this.transFunc(this.el, this.parent);
+	    return ret.map((trans) : Trans => {
+		return new Trans(trans.px + ttrans.px,
+				 trans.py + ttrans.py,
+				 trans.angle, trans.sx, trans.sy);
+	    });
+	}
     }
 
     private place()
@@ -781,23 +888,37 @@ class FanButton {
 // Test
 ////////////////////////////////
 
-
+var buttons;
+var player;
 window.onload = () => {
+
     var el = document.getElementById("upload");
     var menu = new VideoMenu(el);
+
+    
     menu.addItem(new RemovableMenuItem("Test", "", menu));
 
     menu.el.addEventListener("error", (event) => {
 	console.log((<any>event).detail);
     });
 
-    var buttons = document.getElementById("buttons");
+    var stage = document.getElementById("stage");
+    buttons = Positions.positions.map((func) => {
+	var button = new FanButton(stage, func, 1, 1.5, 180, 360, 5);
+	stage.appendChild(button.el);
+	return button;
+    });
 
-    var fanButton = new FanButton(buttons, Positions.topLeft, 1, 180, 360, 5);
-    buttons.appendChild(fanButton.el);
+    el.onclick = () => {
+	buttons.forEach((b) => b.expand());
+    };
+    
+    // Prevent history swipe
+    document.addEventListener("touchmove", (ev) => {
+	ev.preventDefault();
+    });
+    document.addEventListener("wheel", (ev) => {
+	ev.preventDefault();
+    });
 
-    var fanButton2 = new FanButton(buttons, Positions.topRight, 1, 180, 360, 5);
-    buttons.appendChild(fanButton2.el);
-
-    //    new Buttons(document.getElementById("stage"));
 };
