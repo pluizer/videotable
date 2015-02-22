@@ -298,9 +298,27 @@ class VideoPlayer {
 	    VideoPlayer.activePlayer.deactivate();
 	}
 	video.src = this.source;
-	video.currentTime = this.time;
-	VideoPlayer.activePlayer = this;
-	this.el.appendChild(VideoPlayer.video);
+
+	var cont = () => {
+	    video.currentTime = this.time;
+	    video.oncanplay = () {
+		video.oncanplay = null;
+		VideoPlayer.activePlayer = this;
+		this.el.appendChild(VideoPlayer.video);
+	    };
+	    video.onerror = () {
+		video.onerror = null;
+		throw("VideoPlayer::activate()");
+	    };
+	}
+	if (video.readyState < 1) {
+	    video.onloadedmetadata = () => {
+		video.onloadedmetadata = null;
+		cont();
+	    };
+	} else {
+	    cont();
+	}
     }
 
     play(onReady? : () => any,
@@ -845,24 +863,6 @@ class FanButton {
 	this.fan.swapLineFunc(this.fanCircleFunc());	
     }
 };
-
-////////////////////////////////
-// Snapshot
-////////////////////////////////
-
-class Snapshot {
-
-    constructor(public el : HTMLElement) {
-	VideoPlayer.snapshot(null, null, (image) => {
-	    el.style.backgroundImage = "url(" + image + ")";
-	    el.style.backgroundRepeat = "no-repeat";
-	    el.style.backgroundSize = "100%";
-	    el.style.backgroundPosition = "center";
-	});
-	
-    }
-
-}
 
 ////////////////////////////////
 // Test
