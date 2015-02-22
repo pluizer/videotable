@@ -825,6 +825,43 @@ class FanButton {
 };
 
 ////////////////////////////////
+// Side bar
+////////////////////////////////
+
+class SideBar {
+
+    transf : Transformable;
+    _expanded : boolean = false;
+    
+    constructor(public el : HTMLElement) {
+	this.transf = new Transformable(el);
+	this.place();
+    }
+
+    place() {
+	var w = this.el.offsetWidth;
+	var x = this._expanded ? 0 : -w;
+	var opacity = this._expanded ? 1 : 0;
+	this.transf.animate(new Trans(x, 0, 0, 1, 1), 20, 20);
+	$(this.el).animate({
+	    opacity: opacity
+	}, 500 "easeInQuint");
+    }
+
+    set expanded(v : boolean) {
+	this._expanded = v;
+	this.place();
+    }
+
+    get expanded()
+    : boolean {
+	return this._expanded;
+    }
+    
+
+}
+
+////////////////////////////////
 // Test
 ////////////////////////////////
 
@@ -832,13 +869,13 @@ var buttons;
 var player;
 window.onload = () => {
 
-    var el = document.getElementById("upload");
+    var el    = document.getElementById("upload");
+    var stage = document.getElementById("stage");
     var menu = new VideoMenu(el);
-
+    var sideBar = new SideBar(el);
     
     menu.addItem(new RemovableMenuItem("Test", "", menu));
-
-    var stage = document.getElementById("stage");
+    document.body.onkeypress = () => sideBar.expanded = !sideBar.expanded;
 
     buttons = ButtonInits.inits.map((init) => {
 	var button = new FanButton(stage, init.trans,
