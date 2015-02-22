@@ -232,35 +232,28 @@ class VideoPlayer {
 	    el,
 	    VideoPlayer.video.src,
 	    VideoPlayer.video.currentTime);
-	VideoPlayer.snapshot(null, null, (url) => {
+	VideoPlayer.snapshot((url) => {
 	    ret.setBackground(url);
 	});
 	return ret;
     }
     
-    static snapshot(tW, tH, onSucces, onError?: ()=>any)
+    static snapshot(onSucces)
     : void {
 	var video  = VideoPlayer.video;
 	var canvas = document.createElement("canvas");
 	var ctx    = canvas.getContext("2d");
 	var vW     = video.videoWidth;
 	var vH     = video.videoHeight;
-	var tW     = tW || vW;
-	var tH     = tH || vH;
 	var ratio  = vW / vH;
-	var rH     = tW/ratio;
-	var dH     = tH - rH;
-	canvas.width = tW;
-	canvas.height = tH;
+	var rH     = vW/ratio;
+	var dH     = vH - rH;
+	canvas.width = vW;
+	canvas.height = vH;
 	ctx.fillStyle = "rgba(0, 0, 0, 0)";
-	ctx.fillRect(0, 0, tW, tH);
-	try {
-	    ctx.drawImage(video, 0, 0, vW, vH, 0, dH/2, tW, rH);
-	    onSucces(canvas.toDataURL());
-	} catch(err) {
-	    console.log(err);
-	    if (onError) onError();
-	}
+	ctx.fillRect(0, 0, vW, vH);
+	ctx.drawImage(video, 0, 0, vW, vH, 0, dH/2, vW, rH);
+	onSucces(canvas.toDataURL());
     }
 
     private setBackground(url) {
@@ -274,21 +267,14 @@ class VideoPlayer {
     : void {
 	assert(VideoPlayer.activePlayer === this,
 	      "Player to deactivate needs to be active.");
-	VideoPlayer.snapshot(
-	    this.el.clientWidth,
-	    this.el.clientHeight,
-	    (url) => {
+	VideoPlayer.snapshot((url) => {
 		this.setBackground(url);
 		if (VideoPlayer.video.parentElement) {
 		    VideoPlayer.video.parentElement.removeChild(VideoPlayer.video);
 		}
 		this.time = VideoPlayer.video.currentTime;
 		this.source = VideoPlayer.video.src;
-	    },
-	    () => {
-		console.log("Error creating snapshot!");
-	    }
-	);
+	});
     }
 
     activate(onDone?)
@@ -302,11 +288,9 @@ class VideoPlayer {
 	var cont = () => {
 	    video.currentTime = this.time;
 	    video.oncanplay = () => {
-		console.log(">");
 		video.oncanplay = null;
 		VideoPlayer.activePlayer = this;
 		this.el.appendChild(VideoPlayer.video);
-		console.log(onDone);
 		if (onDone) onDone();
 	    };
 	    video.onerror = () => {
@@ -320,7 +304,6 @@ class VideoPlayer {
 		cont();
 	    } else {
 		video.onloadedmetadata = () => {
-		    console.log("$");
 		    video.onloadedmetadata = null;
 		    cont();
 		};
@@ -328,14 +311,8 @@ class VideoPlayer {
 	}
     }
 
-    play(onReady? : () => any,
-	 onError? : () => any) {
-	var video = VideoPlayer.video;
-	video.onerror = function() {
-	    video.onerror = null;
-	    if (onError) onError();
-	};
-	this.activate(onReady);
+    play(onDone?) {
+	this.activate(onDone);
     }
 
     pause()
@@ -513,21 +490,15 @@ class VideoMenu extends Menu {
 		var player = new VideoPlayer(el, url, 0);
 		player.play();
 	    });
-	    super.addItem(item);
-	    VideoPlayer.snapshot(null, null, (image) => {
+	    VideoPlayer.snapshot((image) => {
 		var el = item.el;
 		el.style.backgroundImage = "url(" + image + ")";
 		el.style.backgroundRepeat = "no-repeat";
 		el.style.backgroundSize = "100%";
 		el.style.backgroundPosition = "center";
+		super.addItem(item);
 //		player.pause();
-
-	    }, () => {
-		fireNewEvent("error", this.el, {url: url})
- 	    })
-	}, () => {
-	    // FIXME, does not fire.
-	    fireNewEvent("error", this.el, {url: url})
+	    });
 	});
 	
     }
@@ -867,10 +838,6 @@ window.onload = () => {
 
     
     menu.addItem(new RemovableMenuItem("Test", "", menu));
-
-    menu.el.addEventListener("error", (event) => {
-	console.log((<any>event).detail);
-    });
 
     var stage = document.getElementById("stage");
     buttons = Positions.positions.map((func) => {
