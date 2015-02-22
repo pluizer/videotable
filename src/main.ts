@@ -1,3 +1,4 @@
+/// <reference path="./video.ts" />
 /// <reference path="../deps/hammer.d.ts" />
 /// <reference path="../deps/jquery.d.ts" />
 
@@ -225,7 +226,19 @@ class VideoPlayer {
     ) {
     }
 
-    static snapshot(tW, tH, onSucces?, onError?: ()=>any)
+    static fromCurrentVideo(el : HTMLElement) {
+	assert(VideoPlayer.activePlayer, "oldPlayer");
+	var ret = new VideoPlayer(
+	    el,
+	    VideoPlayer.video.src,
+	    VideoPlayer.video.currentTime);
+	VideoPlayer.snapshot(null, null, (url) => {
+	    ret.setBackground(url);
+	});
+	return ret;
+    }
+    
+    static snapshot(tW, tH, onSucces, onError?: ()=>any)
     : void {
 	var video  = VideoPlayer.video;
 	var canvas = document.createElement("canvas");
@@ -245,23 +258,30 @@ class VideoPlayer {
 	    ctx.drawImage(video, 0, 0, vW, vH, 0, dH/2, tW, rH);
 	    onSucces(canvas.toDataURL());
 	} catch(err) {
+	    console.log(err);
 	    if (onError) onError();
 	}
     }
 
     private setBackground(url) {
+	this.el.style.backgroundSize = "100%";
+	this.el.style.backgroundPosition = "center";
 	this.el.style.backgroundRepeat = "no-repeat";
 	this.el.style.backgroundImage = "url("+url+")";
     }
     
     private deactivate()
     : void {
+	assert(VideoPlayer.activePlayer === this,
+	      "Player to deactivate needs to be active.");
 	VideoPlayer.snapshot(
 	    this.el.clientWidth,
 	    this.el.clientHeight,
 	    (url) => {
 		this.setBackground(url);
-		this.el.removeChild(VideoPlayer.video);
+		if (VideoPlayer.video.parentElement) {
+		    VideoPlayer.video.parentElement.removeChild(VideoPlayer.video);
+		}
 		this.time = VideoPlayer.video.currentTime;
 		this.source = VideoPlayer.video.src;
 	    },
@@ -270,12 +290,15 @@ class VideoPlayer {
 	    }
 	);
     }
-    
-    private activate()
+
+    activate()
     : void {
+	var video = VideoPlayer.video;
 	if (VideoPlayer.activePlayer) {
 	    VideoPlayer.activePlayer.deactivate();
 	}
+	video.src = this.source;
+	video.currentTime = this.time;
 	VideoPlayer.activePlayer = this;
 	this.el.appendChild(VideoPlayer.video);
     }
@@ -284,18 +307,20 @@ class VideoPlayer {
 	 onError? : () => any) {
 	var video = VideoPlayer.video;
 	video.onerror = function() {
-	    console.log("!");
+	    video.onerror = null;
 	    if (onError) onError();
 	};
 
 	this.activate();
 	video.src = this.source;
-
+	
 	// Broken under firefox?
 	var readyFired = false;
-	video.oncanplay = () => {
+	video.onloadedmetadata = () => {
+	    video.onloadedmetadata = null;
 	    video.currentTime = this.time;
 	    video.oncanplay = function() {
+		video.oncanplay = null;
 		if (onReady ) {
 		    readyFired = true;
 		    onReady();
@@ -304,21 +329,9 @@ class VideoPlayer {
 	}
     }
 
-    pause() {
+    pause()
+    : void {
 	VideoPlayer.video.pause();
-    }
-
-    static videoSnapshot(el : HTMLElement) 
-    : VideoPlayer {
-	var oldPlayer = VideoPlayer.activePlayer;
-	var player = new VideoPlayer(
-	    el,
-	    VideoPlayer.video.src,
-	    VideoPlayer.video.currentTime);
-	// TODO: Hmmmm....
-	player.deactivate();
-	oldPlayer.activate();
-	return player;
     }
 }
 
@@ -510,6 +523,7 @@ class VideoMenu extends Menu {
 	});
 	
     }
+
 }
 
 ////////////////////////////////
@@ -763,9 +777,6 @@ class FanButton {
 	/* TODO: Implement as methods */
 	this.el.onclick = () => {
 	    var el = document.createElement("div");
-	    var player = VideoPlayer.videoSnapshot(el);
-	    /**/
-	    el.classList.add("fanItem");
 
 	    var item = new RemovableFanItem(el, this.fan);
 	    // Make appear come from the center of the stage...
@@ -778,7 +789,9 @@ class FanButton {
 		opacity: "1.0"
 	    }, 500);
 	    this.fan.addItem(item);
-
+	    var player = VideoPlayer.fromCurrentVideo(el);
+	    el.classList.add("fanItem");
+	    el.onclick = () => player.activate();
 	    // /* FIXME: Snapshot test, implement better ... */
 	    // VideoPlayer.snapshot(null, null, (image) => {
 	    // 	el.style.backgroundImage = "url(" + image + ")";
@@ -834,68 +847,22 @@ class FanButton {
 };
 
 ////////////////////////////////
-// Buttons
+// Snapshot
 ////////////////////////////////
 
-// class Buttons {
+class Snapshot {
 
-//     buttons : HTMLElement[];
-//     trs : Transformable[];
-//     fans : Fan[];
-    
-//     constructor(public el : HTMLElement) {
-// 	this.buttons = [].slice.call(el.getElementsByClassName("button"));
-// 	this.trs = this.buttons.map((button) => new Transformable(button));
-// 	this.placeButtons();
-// 	window.addEventListener("resize", () => {
-// 	    this.placeButtons();
-// 	});
-// 	this.buttons.forEach((button, i) => {
-// 	    var fan = new Fan(makeCircleFunc(100, 40, 0), 10);
-// 	    this.el.appendChild(fan.el);
-// 	    button.onclick = () => {
-// 		var el = document.createElement("div");
-// 		el.classList.add("fanItem");
-// 		var item = new RemovableFanItem(el, fan);
-// 		fan.addItem(item);
-// 	    };
-	    
-// 	});
-//     }
+    constructor(public el : HTMLElement) {
+	VideoPlayer.snapshot(null, null, (image) => {
+	    el.style.backgroundImage = "url(" + image + ")";
+	    el.style.backgroundRepeat = "no-repeat";
+	    el.style.backgroundSize = "100%";
+	    el.style.backgroundPosition = "center";
+	});
+	
+    }
 
-//     placeButtons() {
-// 	var positions = this.positions();
-// 	this.trs.forEach((tr, i) => {
-// 	    var x = positions[i][0];
-// 	    var y = positions[i][1];
-// 	    tr.translate(new Trans(x, y, 0, 1, 1));
-// 	});
-//     }
-    
-//     positions() {
-// 	var bW = this.buttons[0].offsetWidth;
-// 	var bH = this.buttons[0].offsetHeight;
-// 	var cW = bW/2;
-// 	var cH = bH/2;
-// 	var w  = this.el.offsetWidth;
-// 	var h  = this.el.offsetHeight;       
-// 	return [
-// 	    // Top left
-// 	    [0, 0],
-// 	    // Top center
-// 	    [(w/2)-cW, 0],
-// 	    // Top right
-// 	    [w-bW, 0],
-// 	    // Bottom left
-// 	    [0, h-bH],
-// 	    // Bottom center
-// 	    [(w/2)-cW, h-bH],
-// 	    // Bottom right
-// 	    [w-bW, h-bH]
-// 	];
-//     }
-
-// }
+}
 
 ////////////////////////////////
 // Test
@@ -922,10 +889,6 @@ window.onload = () => {
 	return button;
     });
 
-    el.onclick = () => {
-	buttons.forEach((b) => b.expand());
-    };
-    
     // Prevent history swipe
     document.addEventListener("touchmove", (ev) => {
 	ev.preventDefault();
