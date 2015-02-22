@@ -5,6 +5,7 @@
 ////////////////////////////////
 // Misc
 ////////////////////////////////
+
 function fireNewEvent(
     name : string,
     el : HTMLElement,
@@ -46,30 +47,41 @@ function exitFullscreen() {
   }
 }
 
-function sub(v, min, max) {
-    if (v < min) return min;
-    if (v > max) return max;
-    return v;
-}
-
-function subAbs(v, r) {
-    return sub(v, -Math.abs(r), Math.abs(r));
-}
-
+////////////////////////////////
+// App
+////////////////////////////////
 
 ////////////////////////////////
 // Positions
 ////////////////////////////////
 
-class Positions {
+interface ButtonInit {
+    trans      : Trans;
+    id         : string;
+    angles     : number[];
+}
 
-    static positions = [
-	Positions.topLeft,
-	Positions.topCenter,
-	Positions.topRight,
-	Positions.bottomLeft,
-	Positions.bottomCenter,
-	Positions.bottomRight
+class ButtonInits {
+
+    static inits = [
+	{trans: ButtonInits.topLeft,
+	 id: "topLeft",
+	 angles: [180, 360]},
+	{trans: ButtonInits.topCenter,
+	 id: "topCenter",
+	 angles: [180, 360]},
+	{trans: ButtonInits.topRight,
+	 id: "topRight",
+	 angles: [180, 360]},
+	{trans: ButtonInits.bottomLeft,
+	 id: "bottomLeft",
+	 angles: [180, 360]},
+	{trans: ButtonInits.bottomCenter,
+	 id: "bottomCenter",
+	 angles: [180, 360]},
+	{trans: ButtonInits.bottomRight,
+	 id: "bottomRight",
+	 angles: [180, 360]}
     ];
     
     static topLeft(el : HTMLElement, parent : HTMLElement)
@@ -114,10 +126,6 @@ class Positions {
     }
 }
     
-////////////////////////////////
-// App
-////////////////////////////////
-
 ////////////////////////////////
 // Transformable
 ////////////////////////////////
@@ -612,7 +620,6 @@ class Fan {
 	var points = this.lineFunc(this.items.length);
 	var that = this;
 	this.itemsPlaced = 0
-	var that = this;
 	this.items.forEach(function(item, c) {
 	    item.transf.animate(points[c],
 				that.animationSteps,
@@ -771,14 +778,6 @@ class FanButton {
 	    var player = VideoPlayer.fromCurrentVideo(el);
 	    el.classList.add("fanItem");
 	    el.onclick = () => player.activate(()=>{});
-	    // /* FIXME: Snapshot test, implement better ... */
-	    // VideoPlayer.snapshot(null, null, (image) => {
-	    // 	el.style.backgroundImage = "url(" + image + ")";
-	    // 	el.style.backgroundRepeat = "no-repeat";
-	    // 	el.style.backgroundSize = "100%";
-	    // 	el.style.backgroundPosition = "center";
-	    // });
-
 	};
     }
 
@@ -840,8 +839,12 @@ window.onload = () => {
     menu.addItem(new RemovableMenuItem("Test", "", menu));
 
     var stage = document.getElementById("stage");
-    buttons = Positions.positions.map((func) => {
-	var button = new FanButton(stage, func, 1, 1.5, 180, 360, 5);
+
+    buttons = ButtonInits.inits.map((init) => {
+	var button = new FanButton(stage, init.trans,
+				   1, 1.5,
+				   init.angles[0], init.angles[1], 5);
+	button.el.id = init.id;
 	stage.appendChild(button.el);
 	return button;
     });
