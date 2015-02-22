@@ -291,7 +291,7 @@ class VideoPlayer {
 	);
     }
 
-    activate()
+    activate(onDone?)
     : void {
 	var video = VideoPlayer.video;
 	if (VideoPlayer.activePlayer) {
@@ -301,23 +301,30 @@ class VideoPlayer {
 
 	var cont = () => {
 	    video.currentTime = this.time;
-	    video.oncanplay = () {
+	    video.oncanplay = () => {
+		console.log(">");
 		video.oncanplay = null;
 		VideoPlayer.activePlayer = this;
 		this.el.appendChild(VideoPlayer.video);
+		console.log(onDone);
+		if (onDone) onDone();
 	    };
-	    video.onerror = () {
+	    video.onerror = () => {
 		video.onerror = null;
 		throw("VideoPlayer::activate()");
 	    };
 	}
-	if (video.readyState < 1) {
-	    video.onloadedmetadata = () => {
-		video.onloadedmetadata = null;
+	video.src = this.source;
+	video.onloadstart = () => { 
+	    if (video.readyState >= 1) {
 		cont();
-	    };
-	} else {
-	    cont();
+	    } else {
+		video.onloadedmetadata = () => {
+		    console.log("$");
+		    video.onloadedmetadata = null;
+		    cont();
+		};
+	    }
 	}
     }
 
@@ -328,23 +335,7 @@ class VideoPlayer {
 	    video.onerror = null;
 	    if (onError) onError();
 	};
-
-	this.activate();
-	video.src = this.source;
-	
-	// Broken under firefox?
-	var readyFired = false;
-	video.onloadedmetadata = () => {
-	    video.onloadedmetadata = null;
-	    video.currentTime = this.time;
-	    video.oncanplay = function() {
-		video.oncanplay = null;
-		if (onReady ) {
-		    readyFired = true;
-		    onReady();
-		}
-	    };
-	}
+	this.activate(onReady);
     }
 
     pause()
@@ -513,11 +504,10 @@ class VideoMenu extends Menu {
 	label : string)
     : void {
   	var el = document.createElement("div");
-	var player = new VideoPlayer(document.createElement("div"), url, 10);
+	var player = new VideoPlayer(document.createElement("div"), url, 20);
 	player.play(() => {
 	    var item = new VideoItem(label, "", this);
 	    item.el.addEventListener("tap", () => {
-		console.log("Video tapped!");
 		// FIXME: Just a test...
 		var el = document.getElementById("video");
 		var player = new VideoPlayer(el, url, 0);
@@ -530,7 +520,7 @@ class VideoMenu extends Menu {
 		el.style.backgroundRepeat = "no-repeat";
 		el.style.backgroundSize = "100%";
 		el.style.backgroundPosition = "center";
-		player.pause();
+//		player.pause();
 
 	    }, () => {
 		fireNewEvent("error", this.el, {url: url})
@@ -809,7 +799,7 @@ class FanButton {
 	    this.fan.addItem(item);
 	    var player = VideoPlayer.fromCurrentVideo(el);
 	    el.classList.add("fanItem");
-	    el.onclick = () => player.activate();
+	    el.onclick = () => player.activate(()=>{});
 	    // /* FIXME: Snapshot test, implement better ... */
 	    // VideoPlayer.snapshot(null, null, (image) => {
 	    // 	el.style.backgroundImage = "url(" + image + ")";
