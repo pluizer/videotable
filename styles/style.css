@@ -14,19 +14,30 @@ body {
     overflow: auto;
 }
 
-#upload {
+#sideBar {
     font-family: "Arial, Helvetica, sans-serif";
     font-size: x-large;
-    pointer-events: none;
     position: absolute;
     pointer-events: auto;
     width: 40%;
-    height: 100%;
+    margin: auto;
     float: left;
     z-index: 5;
-    color: white;
-    background: linear-gradient(to right, #c8beb7, #ac9d93);
+    background: linear-gradient(to right, #abc837, #88aa00);
     box-shadow: 10px 0 40px black;
+
+    height: 50%;
+    top:0;
+    bottom: 0;
+    margin: auto;
+
+    border-top-right-radius: 40%;
+    border-bottom-right-radius: 40%;
+
+    overflow: hidden;
+    
+    color: white;
+    text-shadow: 2px 2px 1px rgba(0, 0, 0, .5);
 }
 
 #stage {
@@ -39,11 +50,11 @@ body {
 
 #video {
     position: absolute;
-    width: 80%;
-    height: 80%;
+    width: 70%;
+    height: 70%;
     top:0;
     bottom: 0;
-    left: 10%;
+    left: 0%;
     right: 0;
     margin: auto;
     pointer-events: auto;
@@ -51,11 +62,11 @@ body {
 
 .button {
     position: absolute;
-    border-radius: 50%;
     width: 10vw;
     height: 10vw;
     background-color: green;
     pointer-events: auto;
+    z-index: 4;
 }
 
 .fanItem {
@@ -67,41 +78,55 @@ body {
     -webkit-user-select: none;
     pointer-events: auto;
     z-index: 3;
+    box-shadow: 0px -10px 40px black;
+    z-index: 3;
 }
 
 .menuItem {
     width: 100%;
     float: left;
     border-top: 1px dotted white;
-		     
+	     
 }
 
-#topLeft {
+.topLeft {
     background-color: #ff6600;
+    border-bottom-right-radius: 50%;
     box-shadow: -10px -10px 40px black;
 }
 
-#topCenter {
+.topCenter {
     background-color: #ffcc00;
+    border-bottom-right-radius: 50%;
+    border-bottom-left-radius: 50%;
     box-shadow: 0px -10px 40px black;
 }
 
-#topRight {
+.topRight {
     background-color: #2a7fff;
+    border-bottom-left-radius: 50%;
     box-shadow: 10px -10px 40px black;
 }
 
-#bottomLeft {
+.bottomLeft {
     background-color: #c837ab;
+    border-top-right-radius: 50%;
     box-shadow: -10px 10px 40px black;
 }
 
-#bottomCenter {
+.bottomCenter {
     background-color: #71c837;
+    border-top-right-radius: 50%;
+    border-top-left-radius: 50%;
     box-shadow: 0px 10px 40px black;
 }
 
-#bottomRight {
+.bottomRight {
     background-color: #2ca089;
-    box-shadow: 10px 10px 40px black;
+    border-top-left-radius: 50%;
+    box-shadow: 0px 10px 40px black;
+}
+
+.placeHolder {
+    background-color: #c8beb7;
 }

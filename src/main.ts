@@ -48,10 +48,6 @@ function exitFullscreen() {
 }
 
 ////////////////////////////////
-// App
-////////////////////////////////
-
-////////////////////////////////
 // Positions
 ////////////////////////////////
 
@@ -473,7 +469,7 @@ class VideoMenu extends Menu {
 	
 	var addVideoButton = (() => {
 	    var el = document.createElement("div");
-	    var item = new MenuItem("add video", "", this);
+	    var item = new MenuItem("video toevoegen", "", this);
 	    item.el.classList.add("addVideo");
 	    item.el.addEventListener("tap", (event) => {
 		fileInput.click();
@@ -541,15 +537,15 @@ class ManipulatableFanItem extends FanItem {
 	this.mc = new Hammer.Manager(this.el, {
 	    preventDefault: true
 	});
-	// Panning
-	//	this.mc.add(new Hammer.Pan());
+	this.mc.add(new Hammer.Pan());
 	this.mc.add(new Hammer.Rotate());
 	this.mc.add(new Hammer.Pinch());
 	var panStartTrans : Trans;
-	this.mc.on("rotatestart pinchstart", (ev) => {
+	this.mc.on("panstart rotatestart pinchstart", (ev) => {
+	    console.log("!");
 	    panStartTrans = this.transf.current;
 	});
-	this.mc.on("rotatemove pinchmove", (ev) => {
+	this.mc.on("panmove rotatemove pinchmove", (ev) => {
 	    this.transf.translate(
 		new Trans(panStartTrans.px + ev.deltaX,
 			  panStartTrans.py + ev.deltaY,
@@ -557,7 +553,7 @@ class ManipulatableFanItem extends FanItem {
 			  panStartTrans.sx * ev.scale,
 			  panStartTrans.sy * ev.scale));
 	});
-	this.mc.on("rotateend rotatecancel pinchend pinchcancel", (ev) => {
+	this.mc.on("panend rotateend rotatecancel pinchend pinchcancel", (ev) => {
 	});
     }
 }
@@ -583,6 +579,16 @@ class RemovableFanItem extends FanItem {
 	    this.transf.translate(new Trans(ev.deltaX, ev.deltaY).add(panStartTrans));
 	    var distance = this.el.offsetWidth;
 	    this.el.style.opacity = String(1-(ev.distance/distance));
+	});
+	this.mc.on("panend pancancel", (ev) => {
+	    var distance = this.el.offsetWidth;
+	    this.el.style.opacity = "1";
+	    this.transf.translate(panStartTrans);
+
+	    if (ev.distance >= distance) {
+		this.mc.destroy();
+		this.fan.removeItem(this);
+	    }
 	});
 	this.mc.on("panend pancancel", (ev) => {
 	    var distance = this.el.offsetWidth;
@@ -749,6 +755,7 @@ class FanButton {
 	assert(fromAngle < toAngle, "fromAngle < toAngle");
 	this.el = document.createElement("div");
 	this.el.classList.add("button");
+	this.el.classList.add("placeHolder");
 	this.parent.appendChild(this.el);
 	this.transf = new Transformable(this.el);
 	this.fan = new Fan(
@@ -762,22 +769,26 @@ class FanButton {
 	this.place();
 	/* TODO: Implement as methods */
 	this.el.onclick = () => {
-	    var el = document.createElement("div");
+	    /* TODO: Quick and dirty */
+	    this.el.classList.remove("placeHolder");
+	    this.el.onclick = () => {
+		var el = document.createElement("div");
 
-	    var item = new RemovableFanItem(el, this.fan);
-	    // Make appear come from the center of the stage...
-	    var centerX = (this.parent.offsetWidth /2)-(this.el.offsetWidth /2);
-	    var centerY = (this.parent.offsetHeight/2)-(this.el.offsetHeight/2);
-	    item.transf.translate(new Trans(centerX, centerY, 0, 1, 1));
-	    // Make elements slowly fade in...
-	    el.style.opacity = "0.0";
-	    $(el).animate({
-		opacity: "1.0"
-	    }, 500);
-	    this.fan.addItem(item);
-	    var player = VideoPlayer.fromCurrentVideo(el);
-	    el.classList.add("fanItem");
-	    el.onclick = () => player.activate(()=>{});
+		var item = new RemovableFanItem(el, this.fan);
+		// Make appear come from the center of the stage...
+		var centerX = (this.parent.offsetWidth /2)-(this.el.offsetWidth /2);
+		var centerY = (this.parent.offsetHeight/2)-(this.el.offsetHeight/2);
+		item.transf.translate(new Trans(centerX, centerY, 0, 1, 1));
+		// Make elements slowly fade in...
+		el.style.opacity = "0.0";
+		$(el).animate({
+		    opacity: "1.0"
+		}, 500);
+		this.fan.addItem(item);
+		var player = VideoPlayer.fromCurrentVideo(el);
+		el.classList.add("fanItem");
+		el.onclick = () => player.activate(()=>{});
+	    };
 	};
     }
 
@@ -788,7 +799,7 @@ class FanButton {
 	    this.fan.swapLineFunc(
 		this.fanCircleFunc(), () => {
 		    this.fan.items.forEach((item) => {
-			var el = document.createElement("div");
+			var el = <HTMLElement>item.el.cloneNode(false);
 			el.classList.add("fanItem");
 			var newItem = new ManipulatableFanItem(el);
 			this.fan.swapItem(item, newItem);
@@ -832,20 +843,50 @@ class SideBar {
 
     transf : Transformable;
     _expanded : boolean = false;
-    
+    dragRatio = .95;
+
     constructor(public el : HTMLElement) {
 	this.transf = new Transformable(el);
+	window.addEventListener("resize", () => {
+	    this.place();
+	});
 	this.place();
+	var mc = new Hammer.Manager(el);
+	var panStartTrans;
+	mc.add(new Hammer.Pan({
+	    preventDefault: true,
+	    treshold: 20
+	}));
+	mc.on("panstart", (ev) => {
+	    panStartTrans = this.transf.current;
+	});
+	mc.on("panmove", (ev) => {
+	    if ((!this._expanded && ev.deltaX > 0) ||
+		(this._expanded  && ev.deltaX < 0)) {
+		var w = el.offsetWidth*this.dragRatio;
+		var x = Math.min(ev.deltaX, w);
+		this.transf.translate(new Trans(x, 0).add(panStartTrans));
+	    }
+	});
+	mc.on("panend pancancel", (ev) => {
+	    var w = el.offsetWidth*this.dragRatio;
+	    this.expanded = (this.transf.current.px == 0);
+	});
+
+
     }
 
     place() {
 	var w = this.el.offsetWidth;
-	var x = this._expanded ? 0 : -w;
-	var opacity = this._expanded ? 1 : 0;
-	this.transf.animate(new Trans(x, 0, 0, 1, 1), 20, 20);
-	$(this.el).animate({
-	    opacity: opacity
-	}, 500 "easeInQuint");
+	var x = this._expanded ? 0 : -w*this.dragRatio;
+	this.transf.animate(
+	    new Trans(x, 0, 0, 1, 1), 20, 20
+	);
+	// Disable buttons when not expaned
+	console.log("!");
+	[].forEach.call(this.el.children, el => {
+	    el.style.pointerEvents = this._expanded ? "auto" : "none";
+	});
     }
 
     set expanded(v : boolean) {
@@ -862,6 +903,30 @@ class SideBar {
 }
 
 ////////////////////////////////
+// App
+////////////////////////////////
+
+class App {
+
+    sideBar : SideBar;
+    buttons : FanButton[];
+    video   : VideoPlayer;
+
+    constructor() {
+	var stage = document.getElementById("stage");
+	this.sideBar = new SideBar(document.getElementById("sideBar"));
+	this.buttons = ButtonInits.inits.map(init => {
+	    var button = new FanButton(stage, init.trans,
+				       1, 1.5,
+				       init.angles[0], init.angles[1], 5);
+	    button.el.id = init.id;
+	    stage.appendChild(button.el);
+	    return button;
+	});
+    }
+}
+
+////////////////////////////////
 // Test
 ////////////////////////////////
 
@@ -869,19 +934,34 @@ var buttons;
 var player;
 window.onload = () => {
 
-    var el    = document.getElementById("upload");
+    var el    = document.getElementById("sideBar");
     var stage = document.getElementById("stage");
     var menu = new VideoMenu(el);
     var sideBar = new SideBar(el);
-    
-    menu.addItem(new RemovableMenuItem("Test", "", menu));
+
+    var exit = document.getElementById("exit");
+    var fullFunc = function() {
+	exit.innerHTML = "volledig scherm";
+	exit.onclick = () => {
+	    launchIntoFullscreen(document.documentElement);
+	    exitFullFunc();
+	};
+    }
+    var exitFullFunc = function() {
+	exit.innerHTML = "volledig scherm sluiten";
+	exit.onclick = () => {
+	    exitFullscreen();
+	    fullFunc();
+	};
+    };
+    fullFunc();
     document.body.onkeypress = () => sideBar.expanded = !sideBar.expanded;
 
     buttons = ButtonInits.inits.map((init) => {
 	var button = new FanButton(stage, init.trans,
 				   1, 1.5,
 				   init.angles[0], init.angles[1], 5);
-	button.el.id = init.id;
+	button.el.classList.add(init.id);
 	stage.appendChild(button.el);
 	return button;
     });
