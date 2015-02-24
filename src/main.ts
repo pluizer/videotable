@@ -870,6 +870,7 @@ class FanButton {
 	}, 500);
 	this.fan.addItem(item);
 	el.classList.add("fanItem");
+	el.classList.add(this.el.classList[1] /* pos-class */);
     }
 
     expand() {
@@ -1126,6 +1127,7 @@ window.onload = () => {
 				   init.angles[0], init.angles[1],
 				   $("#qMomentSlider").slider("value"));
 	button.el.classList.add(init.id);
+	button.el.classList.add(init.id+"Button");
 	button.el.style.opacity = "0";
 	stage.appendChild(button.el);
 	return button;

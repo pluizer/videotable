@@ -96,12 +96,18 @@ body {
 
 .topLeft {
     background-color: #ff6600;
+}
+
+.topLeftButton {
     border-bottom-right-radius: 50%;
     box-shadow: -10px -10px 40px black;
 }
 
 .topCenter {
     background-color: #ffcc00;
+}
+
+.topCenterButton {
     border-bottom-right-radius: 50%;
     border-bottom-left-radius: 50%;
     box-shadow: 0px -10px 40px black;
@@ -109,18 +115,27 @@ body {
 
 .topRight {
     background-color: #2a7fff;
+}
+
+.topRightButton {
     border-bottom-left-radius: 50%;
     box-shadow: 10px -10px 40px black;
 }
 
 .bottomLeft {
     background-color: #c837ab;
-    border-top-right-radius: 50%;
+}
+
+.bottomLeftButton {
+   border-top-right-radius: 50%;
     box-shadow: -10px 10px 40px black;
 }
 
 .bottomCenter {
     background-color: #71c837;
+}
+
+.bottomCenterButton {
     border-top-right-radius: 50%;
     border-top-left-radius: 50%;
     box-shadow: 0px 10px 40px black;
@@ -128,6 +143,9 @@ body {
 
 .bottomRight {
     background-color: #2ca089;
+}
+
+.bottomRightButton {
     border-top-left-radius: 50%;
     box-shadow: 0px 10px 40px black;
 }
