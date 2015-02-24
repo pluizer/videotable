@@ -927,7 +927,7 @@ class SideBar {
 
     transf : Transformable;
     _expanded : boolean = false;
-    dragRatio = .95;
+    dragRatio = .9;
 
     constructor(public el : HTMLElement) {
 	this.transf = new Transformable(el);
@@ -939,7 +939,7 @@ class SideBar {
 	var panStartTrans;
 	mc.add(new Hammer.Pan({
 	    preventDefault: true,
-	    treshold: 20
+	    treshold: 10
 	}));
 	mc.on("panstart", (ev) => {
 	    panStartTrans = this.transf.current;
