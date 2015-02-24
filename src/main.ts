@@ -562,9 +562,14 @@ class FanItem {
 class ManipulatableFanItem extends FanItem {
 
     mc : HammerManager;
-    
-    constructor(el : HTMLElement, player : VideoPlayer) {
+    startTime : number;
+
+    constructor(
+	el : HTMLElement,
+	player : VideoPlayer)
+    {
 	super(el, player);
+	this.startTime = player.time;
     }
    
     onPlaced() {
@@ -594,14 +599,13 @@ class ManipulatableFanItem extends FanItem {
 	    VideoPlayer.video.controls = false;
 	    this.player.play(() => {
 		VideoPlayer.video.play();
-		var startTime = VideoPlayer.video.currentTime;
 		VideoPlayer.video.ontimeupdate = () => {
-		    if (VideoPlayer.video.currentTime - startTime > momentTime) {
-			VideoPlayer.video.currentTime = startTime;
+		    if (VideoPlayer.video.currentTime - this.startTime > momentTime) {
+			VideoPlayer.video.currentTime = this.startTime;
 		    }
 		};
 		VideoPlayer.video.onended = () => {
-		    VideoPlayer.video.currentTime = startTime;
+		    VideoPlayer.video.currentTime = this.startTime;
 		    VideoPlayer.video.play();
 		};
 	    });
@@ -612,7 +616,7 @@ class ManipulatableFanItem extends FanItem {
 class RemovableFanItem extends FanItem {
 
     mc : HammerManager;
-
+    
     constructor(el : HTMLElement, public fan : Fan, player : VideoPlayer) {
 	super(el, player);
     }
@@ -850,7 +854,11 @@ class FanButton {
     activeFunc() {
 	var el = document.createElement("div"); 
 	var player = VideoPlayer.fromCurrentVideo(el);
-	var item = new RemovableFanItem(el, this.fan, player);
+	var item = new RemovableFanItem(
+	    el,
+	    this.fan,
+	    player
+	);
 	// Make appear come from the center of the stage...
 	var centerX = (this.parent.offsetWidth /2)-(this.el.offsetWidth /2);
 	var centerY = (this.parent.offsetHeight/2)-(this.el.offsetHeight/2);
@@ -873,7 +881,10 @@ class FanButton {
 		    this.fan.items.forEach((item) => {
 			var el = <HTMLElement>item.el.cloneNode(false);
 			el.classList.add("fanItem");
-			var newItem = new ManipulatableFanItem(el, item.player);
+			var newItem = new ManipulatableFanItem(
+			    el,
+			    item.player
+			);
 			newItem.player.el = el;
 			this.fan.swapItem(item, newItem);
 		    });
