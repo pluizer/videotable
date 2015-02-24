@@ -31,8 +31,8 @@ body {
     bottom: 0;
     margin: auto;
 
-    border-top-right-radius: 40%;
-    border-bottom-right-radius: 40%;
+    border-top-right-radius: 5%;
+    border-bottom-right-radius: 5%;
 
     overflow: hidden;
     

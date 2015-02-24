@@ -1,5 +1,6 @@
 /// <reference path="../deps/hammer.d.ts" />
 /// <reference path="../deps/jquery.d.ts" />
+/// <reference path="../deps/jquery-ui.d.ts" />
 
 ////////////////////////////////
 // Misc
@@ -1077,12 +1078,17 @@ window.onload = () => {
 	return button;
     });
 
+    
+    var qMomentSlider = $("#qMomentSlider").slider({
+	min: 1,
+	max: 10
+    }).mousedown(ev => {
+	ev.stopImmediatePropagation();
+	return false;
+    });
+
     // Prevent history swipe
-    document.addEventListener("touchmove", (ev) => {
-	ev.preventDefault();
-    });
-    document.addEventListener("wheel", (ev) => {
-	ev.preventDefault();
-    });
+    document.addEventListener("touchmove", ev => ev.preventDefault());
+    document.addEventListener("wheel", ev => ev.preventDefault());
 
 };
