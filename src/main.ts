@@ -459,7 +459,7 @@ class VideoMenu extends Menu {
 	    el.type = "file";
 	    el.onchange = () => {
 		var split = el.value.split("\\");
-		var label = split[split.length-1];
+		var label = split[split.length-1].split(".")[0];
 		this.addVideo(URL.createObjectURL(el.files[0]), label);
 		// Create a new FileInput directly so the same file can
 		// be selected multiple times.
