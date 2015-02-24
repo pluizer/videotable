@@ -1,11 +1,11 @@
 body {
     overflow:hidden;
-    background-color: #1a1a1a;
     user-select: none;
     -webkit-user-select: none;
     margin: 0;
     padding: 0;
     pointer-events: none;
+
 }
 
 #app {
@@ -23,8 +23,9 @@ body {
     margin: auto;
     float: left;
     z-index: 5;
-    background: linear-gradient(to right, #abc837, #88aa00);
+    background: radial-gradient(#abc837, #88aa00);
     box-shadow: 10px 0 40px black;
+
 
     height: 50%;
     top:0;
@@ -45,7 +46,9 @@ body {
     height: 100%;
     width: 100%;
     float: right;
-    background-color: #c8beb7;
+    background: radial-gradient(#e3dbdb, #ac9393);
+
+/*    background-color: #c8beb7;*/
 }
 
 #video {
@@ -83,9 +86,11 @@ body {
 }
 
 .menuItem {
-    width: 100%;
+    width: 90%;
     float: left;
     border-top: 1px dotted white;
+    padding-right: 10%;
+    padding-bottom: 2%;
 	     
 }
 

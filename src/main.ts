@@ -6,8 +6,6 @@
 // Misc
 ////////////////////////////////
 
-var momentTime = 10;
-
 function fireNewEvent(
     name : string,
     el : HTMLElement,
@@ -501,12 +499,11 @@ class VideoMenu extends Menu {
 		$(player.el).animate({
 		    opacity: 1
 		});
-
 		// Clear stuff ManipulatableFanItem has done
 		// TODO: Do cleanly somewhere...
+		$("#video")[0].style.backgroundImage = "none"; // FIXME.
 		VideoPlayer.video.controls = true;
 		VideoPlayer.video.ontimeupdate = null;
-
 		VideoPlayer.video.onended = () => {
 		    // Ended for the first time...
 		    // Replay
@@ -655,10 +652,6 @@ class RemovableFanItem extends FanItem {
 		this.fan.removeItem(this);
 	    }
 	});
-	this.el.onclick = () => {
-	    this.player.activate(()=>{})
-	};
-
     }
 }
 
@@ -709,6 +702,13 @@ class Fan {
 	    }
 	}
     }
+
+    itemPop() {
+	var item = this.items.pop();
+	if (item) {
+	    item.el.parentElement.removeChild(item.el);
+	}
+    }
     
     removeItem(item : FanItem) {
 	this.items = this.items.filter((b) => item !== b);
@@ -752,19 +752,19 @@ class Fan {
 	return this.items.length >= this.maxItems-1;
     }
     
-    set maxItems(v : number) {
-	var wasFull = this.isFull();
-	this._maxItems = v;
-	if (wasFull && ! this.isFull()) {
-	    if (this.onRoomAgain) this.onRoomAgain(this);
-	}
-    }
-
     get maxItems()
     : number {
 	return this._maxItems;
     }
-    
+
+    set maxItems(v : number) {
+	console.log(v, ",", this.items.length);
+	while (this.items.length > v) {
+	    this.itemPop();
+	}
+	this._maxItems = v;
+    }
+
 }
 
 function makeSimpleLineFunc(width : number)
@@ -809,7 +809,7 @@ class FanButton {
     fan : Fan;
     expanded : boolean = false;
     active : boolean = false;
-
+    
     constructor(
 	public parent : HTMLElement,
 	public transFunc : (el : HTMLElement, parent : HTMLElement) => Trans,
@@ -817,6 +817,7 @@ class FanButton {
 	public expandedRadiusRatio : number,
 	public fromAngle : number,
 	public toAngle : number,
+	//Fixme: does not auto update
 	public maxItems : number
     ) {
 	assert(fromAngle < toAngle, "fromAngle < toAngle");
@@ -834,8 +835,7 @@ class FanButton {
 	    this.place();
 	});
 	this.place();
-	/* TODO: Implement as methods */
-	/* TODO: Quick and dirty */
+
     }
 
     addFunc() {
@@ -927,7 +927,6 @@ class FanButton {
 	this.expanded = false;
 	this.place();
     }
-
 };
 
 ////////////////////////////////
@@ -965,7 +964,7 @@ class SideBar {
 	});
 	mc.on("panend pancancel", (ev) => {
 	    var w = el.offsetWidth*this.dragRatio;
-	    this.expanded = (this.transf.current.px == 0);
+	    this.expanded = (this.transf.current.px > -20);
 	});
 
 
@@ -999,6 +998,7 @@ class SideBar {
 
 }
 
+
 ////////////////////////////////
 // App
 ////////////////////////////////
@@ -1015,7 +1015,8 @@ class App {
 	this.buttons = ButtonInits.inits.map(init => {
 	    var button = new FanButton(stage, init.trans,
 				       1, 1.5,
-				       init.angles[0], init.angles[1], 5);
+				       init.angles[0], init.angles[1],
+				       $("#qMomentSlider").slider("value"));
 	    button.el.id = init.id;
 	    stage.appendChild(button.el);
 	    return button;
@@ -1029,6 +1030,12 @@ class App {
 
 var buttons;
 var player;
+
+var defaultQSnapshots = 5;
+var defaultMomentTime = 5;
+// FIXME: Remove ...
+var momentTime = 5;
+
 window.onload = () => {
 
     var el    = document.getElementById("sideBar");
@@ -1036,6 +1043,40 @@ window.onload = () => {
     var menu = new VideoMenu(el);
     var sideBar = new SideBar(el);
 
+    var qMomentSlider = $("#qMomentSlider").slider({
+	min: 1,
+	max: 10,
+	value: defaultQSnapshots,
+	change: (ev, ui) => {
+	    buttons.forEach((button) => {
+		button.maxItems = ui.value;
+		button.fan.maxItems = ui.value;
+		button.place();
+	    });
+	    $("#qm").text(String(ui.value));
+	}
+    }).mousedown(ev => {
+	ev.stopImmediatePropagation();
+	return false;
+    });
+    $("#qm").text(defaultQSnapshots);
+
+    var qTimeSlider = $("#qTimeSlider").slider({
+	min: 1,
+	max: 30,
+	value: defaultMomentTime,
+	change: (ev, ui) => {
+	    momentTime = ui.value;
+	    $("#lt").text(String(ui.value));
+	}
+    }).mousedown(ev => {
+	ev.stopImmediatePropagation();
+	return false;
+    });
+    $("#lt").text(defaultQSnapshots);
+
+
+    
     var exit = document.getElementById("exit");
     var fullFunc = function() {
 	exit.innerHTML = "volledig scherm";
@@ -1082,7 +1123,8 @@ window.onload = () => {
     buttons = ButtonInits.inits.map((init) => {
 	var button = new FanButton(stage, init.trans,
 				   1, 1.5,
-				   init.angles[0], init.angles[1], 5);
+				   init.angles[0], init.angles[1],
+				   $("#qMomentSlider").slider("value"));
 	button.el.classList.add(init.id);
 	button.el.style.opacity = "0";
 	stage.appendChild(button.el);
@@ -1090,14 +1132,6 @@ window.onload = () => {
     });
 
     
-    var qMomentSlider = $("#qMomentSlider").slider({
-	min: 1,
-	max: 10
-    }).mousedown(ev => {
-	ev.stopImmediatePropagation();
-	return false;
-    });
-
     // Prevent history swipe
     document.addEventListener("touchmove", ev => ev.preventDefault());
     document.addEventListener("wheel", ev => ev.preventDefault());
