@@ -15,8 +15,10 @@ function fireNewEvent(
     el.dispatchEvent(event);
 }
 
-function assert(condition, message) {
-    if (!condition) {
+function assert(condition, message)
+{
+    if (!condition)
+    {
         message = message || "Assertion failed";
         if (typeof Error !== "undefined") {
             throw new Error(message);
@@ -25,26 +27,42 @@ function assert(condition, message) {
     }
 }
 
-function launchIntoFullscreen(element) {
-  if(element.requestFullscreen) {
-    element.requestFullscreen();
-  } else if(element.mozRequestFullScreen) {
-    element.mozRequestFullScreen();
-  } else if(element.webkitRequestFullscreen) {
-    element.webkitRequestFullscreen();
-  } else if(element.msRequestFullscreen) {
-    element.msRequestFullscreen();
-  }
+function launchIntoFullscreen(element : HTMLElement)
+{
+    var el = <any>element;
+    if(el.requestFullscreen) {
+	el.requestFullscreen();
+    } else if(el.mozRequestFullScreen) {
+	el.mozRequestFullScreen();
+    } else if(el.webkitRequestFullscreen) {
+	el.webkitRequestFullscreen();
+    } else if(el.msRequestFullscreen) {
+	el.msRequestFullscreen();
+    }
 }
 
-function exitFullscreen() {
-    if((<any>document).exitFullscreen) {
-	(<any>document).exitFullscreen();
-    } else if((<any>document).mozCancelFullScreen) {
-	(<any>document).mozCancelFullScreen();
-    } else if((<any>document).webkitExitFullscreen) {
-	(<any>document).webkitExitFullscreen();
-  }
+function exitFullscreen()
+{
+    var doc = <any>document;
+    if(doc.exitFullscreen) {
+	doc.exitFullscreen();
+    } else if((doc).mozCancelFullScreen) {
+	doc.mozCancelFullScreen();
+    } else if((doc).webkitExitFullscreen) {
+	doc.webkitExitFullscreen();
+    }
+}
+
+function withCooldown(sec : number, func : () => void)
+{
+    var cooling = false;
+    return () => {
+	if (!cooling) {
+	    func();
+	    cooling = true;
+	    setTimeout(() => cooling = false, sec);
+	}
+    };
 }
 
 ////////////////////////////////
@@ -272,7 +290,7 @@ class VideoPlayer {
 	this.el.style.backgroundImage = "url("+url+")";
     }
     
-    private deactivate()
+    deactivate()
     : void {
 	assert(VideoPlayer.activePlayer === this,
 	      "Player to deactivate needs to be active.");
@@ -323,6 +341,7 @@ class VideoPlayer {
 
     play(onDone?) {
 	this.activate(onDone);
+	VideoPlayer.video.play();
     }
 
     pause()
@@ -361,15 +380,9 @@ class MenuItem {
 	this.mc = new Hammer.Manager(this.el);
 	var mc = this.mc;
 	mc.add(new Hammer.Tap());
-	var downTime = false; // Have some downtime before being able to refire.
-	mc.on("tap", (ev) => {
-	    ev.preventDefault();
-	    if (!downTime) {
-		fireNewEvent("tap", this.el);
-		setTimeout(() => {
-		    downTime = false;
-		}, 500);
-	    }
+
+	mc.on("tap", ev => {
+	    withCooldown(500, () => fireNewEvent("tap", this.el))();
 	});
     }
 }
@@ -496,19 +509,13 @@ class VideoMenu extends Menu {
 	    var item = new VideoItem(label, "", this);
 	    item.el.addEventListener("tap", ev => {
 
-
-		// FIXME: Just a test...
 		var el = document.getElementById("video");
 		var player = new VideoPlayer(el, url, 0);
 		console.log("!");
 		$(player.el).animate({
 		    opacity: 1
 		});
-		// Clear stuff ManipulatableFanItem has done
-		// TODO: Do cleanly somewhere...
-		$("#video")[0].style.backgroundImage = "none"; // FIXME.
-		VideoPlayer.video.controls = true;
-		VideoPlayer.video.ontimeupdate = null;
+		VideoPlayer.video.controls     = true;
 		VideoPlayer.video.onended = () => {
 		    // Ended for the first time...
 		    // Replay
@@ -595,30 +602,35 @@ class ManipulatableFanItem extends FanItem {
 	});
 	this.mc.on("rotateend rotatecancel pinchend pinchcancel", (ev) => {
 	});
-	var tapCooldown = false;
-	this.mc.on("tap", (ev) => {
-	    // Ignore taps less than have a second from each other
-	    // this works around a bug in hammer.js
-	    if (tapCooldown) return;
-	    tapCooldown = true;
-	    setTimeout(()=>{tapCooldown=false}, 500);
 
-	    // TODO: Do this cleanly somewhere else...
-	    console.log(this);
-	    VideoPlayer.video.controls = false;
-	    this.player.play(() => {
-		VideoPlayer.video.play();
-		VideoPlayer.video.ontimeupdate = () => {
-		    if (VideoPlayer.video.currentTime - this.startTime > momentTime) {
-			VideoPlayer.video.currentTime = this.startTime;
-		    }
-		};
-		VideoPlayer.video.onended = () => {
-		    VideoPlayer.video.currentTime = this.startTime;
-		    VideoPlayer.video.play();
-		};
-	    });
+	this.stopPlaying();
+    }
+
+    startPlaying()
+    {
+	var video = VideoPlayer.video;
+	video.controls = false;
+	video.currentTime = this.startTime;
+	this.player.play(() => {
+	    video.ontimeupdate = () => {
+		if (video.currentTime - this.startTime > momentTime) {
+		    this.stopPlaying();
+		}
+	    };
+	    this.el.onclick = video.onended = () => {
+		this.stopPlaying();
+	    };
 	});
+    }
+
+    stopPlaying()
+    {
+	var video = VideoPlayer.video;
+	video.onended =	video.ontimeupdate = null;
+	video.pause();
+	this.el.onclick = () => {
+	    this.startPlaying();
+	};
     }
 }
 
@@ -777,19 +789,6 @@ class Fan {
 	this._maxItems = v;
     }
 
-}
-
-function makeSimpleLineFunc(width : number)
-: (length : number) => Trans[] {
-    return function(count : number)
-    : Trans[] {
-	var transs = [];
-	for (var i=0; i<count; i++) {
-	    transs.push(new Trans((width/count)*i,
-				  0, 0, 1, 1));
-	}
-	return transs;
-    }
 }
 
 function makeCircleFunc(radius : number,
