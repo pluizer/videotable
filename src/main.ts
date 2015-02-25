@@ -65,7 +65,7 @@ class ButtonInits {
 	 angles: [110, 220]},
 	{trans: ButtonInits.topCenter,
 	 id: "topCenter",
-	 angles: [180, 360]},
+	 angles: [160, 320]},
 	{trans: ButtonInits.topRight,
 	 id: "topRight",
 	 angles: [180, 360]},
@@ -74,7 +74,7 @@ class ButtonInits {
 	 angles: [180, 360]},
 	{trans: ButtonInits.bottomCenter,
 	 id: "bottomCenter",
-	 angles: [180, 360]},
+	 angles: [0, 180]},
 	{trans: ButtonInits.bottomRight,
 	 id: "bottomRight",
 	 angles: [180, 360]}
@@ -252,15 +252,20 @@ class VideoPlayer {
 	var ratio  = vW / vH;
 	var rH     = vW/ratio;
 	var dH     = vH - rH;
-	canvas.width = vW;
-	canvas.height = vH;
-	ctx.fillStyle = "rgba(0, 0, 0, 0)";
-	ctx.fillRect(0, 0, vW, vH);
-	ctx.drawImage(video, 0, 0, vW, vH, 0, dH/2, vW, rH);
-	onSucces(canvas.toDataURL());
+	try {
+	    canvas.width = vW;
+	    canvas.height = vH;
+	    ctx.fillStyle = "rgba(0, 0, 0, 0)";
+	    ctx.fillRect(0, 0, vW, vH);
+	    ctx.drawImage(video, 0, 0, vW, vH, 0, dH/2, vW, rH);
+	    onSucces(canvas.toDataURL());
+	} catch(err) {
+	    console.log(err);
+	}
     }
 
     private setBackground(url) {
+	console.log(url);
 	this.el.style.backgroundSize = "100%";
 	this.el.style.backgroundPosition = "center";
 	this.el.style.backgroundRepeat = "no-repeat";
@@ -560,7 +565,7 @@ class ManipulatableFanItem extends FanItem {
 
     mc : HammerManager;
     startTime : number;
-
+    
     constructor(
 	el : HTMLElement,
 	player : VideoPlayer)
@@ -590,9 +595,16 @@ class ManipulatableFanItem extends FanItem {
 	});
 	this.mc.on("rotateend rotatecancel pinchend pinchcancel", (ev) => {
 	});
+	var tapCooldown = false;
 	this.mc.on("tap", (ev) => {
-	    // TODO: Cycle Deactivate tap ...
+	    // Ignore taps less than have a second from each other
+	    // this works around a bug in hammer.js
+	    if (tapCooldown) return;
+	    tapCooldown = true;
+	    setTimeout(()=>{tapCooldown=false}, 500);
+
 	    // TODO: Do this cleanly somewhere else...
+	    console.log(this);
 	    VideoPlayer.video.controls = false;
 	    this.player.play(() => {
 		VideoPlayer.video.play();

@@ -94,6 +94,26 @@ body {
 	     
 }
 
+.ui-widget-content {
+    border: 1px solid #abc837;
+    background: #abc837;
+}
+
+.ui-widget-content .ui-state-default {
+    border: 1px solid #abc837;
+    background: #bcd35f;
+}
+
+.ui-widget-content .ui-state-default .ui-state-hover {
+    border: 1px solid #abc837;
+    background: #bcd35f;
+}
+
+.ui-slider {
+    margin-left: 10px;
+    margin-top:  5px;
+}
+
 .topLeft {
     background-color: #ff6600;
 }
