@@ -80,22 +80,22 @@ class ButtonInits {
     static inits = [
 	{trans: ButtonInits.topLeft,
 	 id: "topLeft",
-	 angles: [110, 220]},
+	 angles: [70, 110]},
 	{trans: ButtonInits.topCenter,
 	 id: "topCenter",
-	 angles: [160, 320]},
+	 angles: [110, 110]},
 	{trans: ButtonInits.topRight,
 	 id: "topRight",
-	 angles: [180, 360]},
+	 angles: [190, 110]},
 	{trans: ButtonInits.bottomLeft,
 	 id: "bottomLeft",
-	 angles: [180, 360]},
+	 angles: [10, 110]},
 	{trans: ButtonInits.bottomCenter,
 	 id: "bottomCenter",
-	 angles: [0, 180]},
+	 angles: [310, 110]},
 	{trans: ButtonInits.bottomRight,
 	 id: "bottomRight",
-	 angles: [180, 360]}
+	 angles: [250, 110]}
     ];
     
     static topLeft(el : HTMLElement, parent : HTMLElement)
@@ -149,7 +149,8 @@ class Trans {
 		public py : number,
 		public angle : number = 0,
 		public sx : number = 0,
-		public sy : number = 0) {
+		public sy : number = 0
+	       ) {
     }
 
     add(trans : Trans)
@@ -283,7 +284,6 @@ class VideoPlayer {
     }
 
     private setBackground(url) {
-	console.log(url);
 	this.el.style.backgroundSize = "100%";
 	this.el.style.backgroundPosition = "center";
 	this.el.style.backgroundRepeat = "no-repeat";
@@ -294,12 +294,13 @@ class VideoPlayer {
     : void {
 	assert(VideoPlayer.activePlayer === this,
 	      "Player to deactivate needs to be active.");
+	if (this.onDeactivated) this.onDeactivated();
 	VideoPlayer.snapshot((url) => {
 		this.setBackground(url);
 		if (VideoPlayer.video.parentElement) {
 		    VideoPlayer.video.parentElement.removeChild(VideoPlayer.video);
 		}
-		this.time = VideoPlayer.video.currentTime;
+// FIXE:	this.time = VideoPlayer.video.currentTime;
 		this.source = VideoPlayer.video.src;
 	});
     }
@@ -347,6 +348,13 @@ class VideoPlayer {
     pause()
     : void {
 	VideoPlayer.video.pause();
+    }
+
+    setTime(v : number) {
+	this.time = v;
+    }
+
+    onDeactivated() {
     }
 }
 
@@ -490,7 +498,7 @@ class VideoMenu extends Menu {
 	    var el = document.createElement("div");
 	    var item = new MenuItem("video toevoegen", "", this);
 	    item.el.classList.add("addVideo");
-	    item.el.addEventListener("tap", (event) => {
+	    item.el.addEventListener("click", (event) => {
 		fileInput.click();
 	    });
 	    return item;
@@ -511,13 +519,32 @@ class VideoMenu extends Menu {
 
 		var el = document.getElementById("video");
 		var player = new VideoPlayer(el, url, 0);
-		console.log("!");
 		$(player.el).animate({
 		    opacity: 1
 		});
-		VideoPlayer.video.controls     = true;
+		// Enlarge video ...
+		$("#video").css({
+		    width: "1%",
+		    height: "1%"
+		}).animate({
+		    width: "100%",
+		    height: "100%"
+		});
+		mustHideButtons = true;
+		hideButtons();
+		sideBar.expanded = false;
+		
+		VideoPlayer.video.controls = true;
 		VideoPlayer.video.onended = () => {
 		    // Ended for the first time...
+		    // Shrink video
+		    $("#video").animate({
+			width: "60%",
+			height: "60%"
+		    });
+		    mustHideButtons = false;
+		    unHideButtons();
+		    
 		    // Replay
 		    VideoPlayer.video.currentTime = 0;
 		    // Activate buttons (TODO)
@@ -572,6 +599,7 @@ class ManipulatableFanItem extends FanItem {
 
     mc : HammerManager;
     startTime : number;
+    static runningZ : number = 4;
     
     constructor(
 	el : HTMLElement,
@@ -591,6 +619,8 @@ class ManipulatableFanItem extends FanItem {
 	var panStartTrans : Trans;
 	this.mc.on("rotatestart pinchstart", (ev) => {
 	    panStartTrans = this.transf.current;
+	    ManipulatableFanItem.runningZ++;
+	    this.el.style.zIndex = String(ManipulatableFanItem.runningZ);
 	});
 	this.mc.on("rotatemove pinchmove", (ev) => {
 	    this.transf.translate(
@@ -608,17 +638,18 @@ class ManipulatableFanItem extends FanItem {
 
     startPlaying()
     {
+	var start = Math.max(0, this.startTime-(momentTime/2));
 	var video = VideoPlayer.video;
+	this.player.setTime(start);
 	video.controls = false;
-	video.currentTime = this.startTime;
 	this.player.play(() => {
+	    this.el.onclick = video.onended = this.player.onDeactivated = () => {
+		this.stopPlaying();
+	    };
 	    video.ontimeupdate = () => {
-		if (video.currentTime - this.startTime > momentTime) {
+		if (video.currentTime - start > momentTime) {
 		    this.stopPlaying();
 		}
-	    };
-	    this.el.onclick = video.onended = () => {
-		this.stopPlaying();
 	    };
 	});
     }
@@ -626,7 +657,7 @@ class ManipulatableFanItem extends FanItem {
     stopPlaying()
     {
 	var video = VideoPlayer.video;
-	video.onended =	video.ontimeupdate = null;
+	video.onended =	video.ontimeupdate = this.player.onDeactivated = null;
 	video.pause();
 	this.el.onclick = () => {
 	    this.startPlaying();
@@ -782,7 +813,6 @@ class Fan {
     }
 
     set maxItems(v : number) {
-	console.log(v, ",", this.items.length);
 	while (this.items.length > v) {
 	    this.itemPop();
 	}
@@ -799,7 +829,7 @@ function makeCircleFunc(radius : number,
     : Trans [] {
 	var transs = []
 	var d = (Math.PI*2) / itemProCircle;
-	var a = (Math.PI*4) + (angle * (Math.PI/180));
+	var a = (Math.PI*4) + ((angle-90) * (Math.PI/180));
 	for (var i=0; i<count; i++) {
 	    var x = Math.cos((d*i)+a) * radius;
 	    var y = Math.sin((d*i)+a) * radius;
@@ -820,6 +850,7 @@ class FanButton {
     fan : Fan;
     expanded : boolean = false;
     active : boolean = false;
+    itemW : number;
     
     constructor(
 	public parent : HTMLElement,
@@ -827,11 +858,10 @@ class FanButton {
 	public radiusRatio : number,
 	public expandedRadiusRatio : number,
 	public fromAngle : number,
-	public toAngle : number,
+	public angleLength : number,
 	//Fixme: does not auto update
 	public maxItems : number
     ) {
-	assert(fromAngle < toAngle, "fromAngle < toAngle");
 	this.el = document.createElement("div");
 	this.el.classList.add("button");
 	this.el.classList.add("placeHolder");
@@ -911,12 +941,11 @@ class FanButton {
 	var radiusRatio = this.expanded ? this.expandedRadiusRatio : this.radiusRatio;
 	var func =  makeCircleFunc(
 	    this.el.offsetWidth * radiusRatio,
-	    (this.maxItems-1) * (360 / (this.fromAngle - this.toAngle)),
+	    (this.maxItems-1) * (360 / this.angleLength),
 	    this.fromAngle
 	);
 	return (length : number) : Trans[] => {
 	    if (length > 0) {
-//		var itemW = this.fan.items[0].el.offsetWidth;
 		var ret = func(length);
 		var ttrans = this.transFunc(this.el, this.parent);
 		return ret.map((trans) : Trans => {
@@ -930,6 +959,13 @@ class FanButton {
 
     private place()
     : void {
+	var el = document.createElement("div");
+	el.classList.add("fanItem");
+	this.el.appendChild(el);
+	this.itemW = el.offsetWidth;
+	this.el.removeChild(el);
+	
+	
 	this.transf.translate(this.transFunc(this.el, this.parent));
 	this.fan.swapLineFunc(this.fanCircleFunc());	
     }
@@ -1041,19 +1077,38 @@ class App {
 ////////////////////////////////
 
 var buttons;
+var mustHideButtons = false;
+function hideButtons() {
+    buttons.forEach(b => {
+	if (b.active) {
+	    b.el.style.opacity = "0.0";
+	    b.el.style.pointerEvent = "none";
+	}
+    });
+}
+function unHideButtons() {
+    buttons.forEach(b => {
+	if (b.active) {
+	    b.el.style.opacity = "1.0";
+	    b.el.style.pointerEvent = "auto";
+	}
+    });
+}
+
 var player;
 
 var defaultQSnapshots = 5;
 var defaultMomentTime = 5;
 // FIXME: Remove ...
 var momentTime = 5;
+var sideBar;
 
 window.onload = () => {
 
     var el    = document.getElementById("sideBar");
     var stage = document.getElementById("stage");
     var menu = new VideoMenu(el);
-    var sideBar = new SideBar(el);
+    sideBar = new SideBar(el);
 
     var qMomentSlider = $("#qMomentSlider").slider({
 	min: 1,
@@ -1106,26 +1161,28 @@ window.onload = () => {
     };
 
     sideBar.el.addEventListener("unexpanded", () => {
-	console.log("unexpanded");
 	buttons.forEach((button) => {
 	    if (!button.active) {
-		button.el.style.opacity = "0";
+		button.el.style.opacity = "0.0";
 	    } else {
 		button.el.onclick = null;
 		button.el.onclick = () => { button.activeFunc(); };
+	    }
+	    if (mustHideButtons) {
+		hideButtons();
 	    }
 	});
     });
 
     sideBar.el.addEventListener("expanded", () => {
-	console.log("expanded");
 	buttons.forEach((button) => {
+	    button.el.style.opacity = "1.0";
 	    if (!button.active) {
-		button.el.style.opacity = "1";
 		button.el.onclick = () => { button.addFunc(); };
 	    } else {
 		button.el.onclick = () => { button.removeFunc(); };
 	    }
+	    unHideButtons();
 	});
     });
 
@@ -1139,7 +1196,7 @@ window.onload = () => {
 				   $("#qMomentSlider").slider("value"));
 	button.el.classList.add(init.id);
 	button.el.classList.add(init.id+"Button");
-	button.el.style.opacity = "0";
+	button.el.style.opacity = "0.0";
 	stage.appendChild(button.el);
 	return button;
     });

@@ -22,7 +22,7 @@ body {
     width: 30%;
     margin: auto;
     float: left;
-    z-index: 5;
+    z-index: 99999;
     background: radial-gradient(#abc837, #88aa00);
     box-shadow: 10px 0 40px black;
 
