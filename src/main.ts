@@ -272,11 +272,11 @@ class VideoPlayer {
 	var rH     = vW/ratio;
 	var dH     = vH - rH;
 	try {
-	    canvas.width = vW;
-	    canvas.height = vH;
+	    canvas.width = vW/5;
+	    canvas.height = vH/5;
 	    ctx.fillStyle = "rgba(0, 0, 0, 0)";
 	    ctx.fillRect(0, 0, vW, vH);
-	    ctx.drawImage(video, 0, 0, vW, vH, 0, dH/2, vW, rH);
+	    ctx.drawImage(video, 0, 0, vW, vH, 0, dH/2, vW/5, rH/5);
 	    onSucces(canvas.toDataURL());
 	} catch(err) {
 	    console.log(err);
@@ -514,6 +514,7 @@ class VideoMenu extends Menu {
   	var el = document.createElement("div");
 	var player = new VideoPlayer(document.createElement("div"), url, 20);
 	player.play(() => {
+            player.pause();
 	    var item = new VideoItem(label, "", this);
 	    item.el.addEventListener("tap", ev => {
 
@@ -570,7 +571,6 @@ class VideoMenu extends Menu {
 		el.style.backgroundSize = "100%";
 		el.style.backgroundPosition = "center";
 		super.addItem(item);
-		//		player.pause();
 	    });
 	});
 	

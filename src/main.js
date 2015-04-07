@@ -197,11 +197,11 @@ var VideoPlayer = (function () {
         var rH = vW / ratio;
         var dH = vH - rH;
         try {
-            canvas.width = vW;
-            canvas.height = vH;
+            canvas.width = vW / 5;
+            canvas.height = vH / 5;
             ctx.fillStyle = "rgba(0, 0, 0, 0)";
             ctx.fillRect(0, 0, vW, vH);
-            ctx.drawImage(video, 0, 0, vW, vH, 0, dH / 2, vW, rH);
+            ctx.drawImage(video, 0, 0, vW, vH, 0, dH / 2, vW / 5, rH / 5);
             onSucces(canvas.toDataURL());
         }
         catch (err) {
@@ -412,6 +412,7 @@ var VideoMenu = (function (_super) {
         var el = document.createElement("div");
         var player = new VideoPlayer(document.createElement("div"), url, 20);
         player.play(function () {
+            player.pause();
             var item = new VideoItem(label, "", _this);
             item.el.addEventListener("tap", function (ev) {
                 var el = document.getElementById("video");
@@ -465,7 +466,6 @@ var VideoMenu = (function (_super) {
                 el.style.backgroundSize = "100%";
                 el.style.backgroundPosition = "center";
                 _super.prototype.addItem.call(_this, item);
-                //		player.pause();
             });
         });
     };
