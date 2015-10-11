@@ -887,7 +887,7 @@ class Fan {
 	    item.el.parentElement.removeChild(item.el);
 	}
     }
-    
+
     removeItem(item : FanItem) {
 	this.items = this.items.filter((b) => item !== b);
 	if (item.el.parentElement) {
@@ -1050,6 +1050,9 @@ class FanButton {
 	el.classList.add(this.el.classList[1] /* pos-class */);
     }
 
+    /**
+     * Grows the fan's circle and turns all FanItems into ManipulatableFanItems
+     */
     expand() {
 	if (!this.expanded) {
 	    this.expanded = true;
@@ -1093,6 +1096,9 @@ class FanButton {
 	}
     }
 
+    /**
+     * Places the sidebar into the dom
+     */
     private place()
     : void {
 	var el = document.createElement("div");
@@ -1159,6 +1165,9 @@ class SideBar {
 
     }
 
+    /**
+     * Places the sidebar into the dom
+     */
     place() {
 	var w = this.el.offsetWidth;
 	var x = this._expanded ? 0 : -w*this.dragRatio;
@@ -1247,7 +1256,7 @@ var defaultMomentTime = 5;
 var momentTime = 5;
 var sideBar;
 
-// Put all elements together ...
+// Put all elements and events together ...
 window.onload = () => {
 
     var el    = document.getElementById("sideBar");
