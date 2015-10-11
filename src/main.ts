@@ -2,10 +2,13 @@
 /// <reference path="../deps/jquery.d.ts" />
 /// <reference path="../deps/jquery-ui.d.ts" />
 
-////////////////////////////////
-// Misc
-////////////////////////////////
+/////////////////////////////////////////////
+// A bunch of miscellaneous helper functions
+/////////////////////////////////////////////
 
+/**
+ * A bunch of miscellaneous helper functions
+ */
 function fireNewEvent(
     name : string,
     el : HTMLElement,
@@ -27,6 +30,10 @@ function assert(condition, message)
     }
 }
 
+/**
+ * Set browser to fullscreen mode, showing just one element and
+ * its children.
+ */
 function launchIntoFullscreen(element : HTMLElement)
 {
     var el = <any>element;
@@ -41,6 +48,10 @@ function launchIntoFullscreen(element : HTMLElement)
     }
 }
 
+/**
+ * Return from fullscreen.
+ * NOTE: Only works when fullscreen was entered using launchIntoFullscreen
+ */
 function exitFullscreen()
 {
     var doc = <any>document;
@@ -53,6 +64,9 @@ function exitFullscreen()
     }
 }
 
+/**
+ * Makes sure a specific 'func' does not fire twice within 'sec' seconds.
+ */
 function withCooldown(sec : number, func : () => void)
 {
     var cooling = false;
@@ -69,6 +83,9 @@ function withCooldown(sec : number, func : () => void)
 // Positions
 ////////////////////////////////
 
+/**
+ * Rules to set all buttons in there correct places.
+ */
 interface ButtonInit {
     trans      : Trans;
     id         : string;
@@ -144,6 +161,12 @@ class ButtonInits {
 // Transformable
 ////////////////////////////////
 
+/**
+ * A transformation target
+ * px, py	the target coordinates
+ * angle	the target angle
+ * sx, sy	the target scale		
+ */
 class Trans {
     constructor(public px : number,
 		public py : number,
@@ -153,6 +176,9 @@ class Trans {
 	       ) {
     }
 
+    /**
+     * Returns the some of this transformation and another one.
+     */
     add(trans : Trans)
     : Trans {
 	return new Trans(
@@ -164,6 +190,10 @@ class Trans {
 	);
     }
 
+    /**
+     * Returns this transformation to a string that can be
+     * used as a css rule.
+     */
     toString()
     : string {
 	return (""
@@ -176,6 +206,10 @@ class Trans {
     }
 }
 
+/**
+ * A Transformable wraps around a element to add the ability to
+ * animate and transform it.
+ */
 class Transformable {
     target : Trans;
     count : number;
@@ -185,6 +219,9 @@ class Transformable {
 	this.count = 0;
     }
 
+    /**
+     * Translate/transform the element
+     */
     translate(target : Trans)
     : void {
 	this.current = target;
@@ -192,6 +229,10 @@ class Transformable {
 	(<any>this.el.style).webkitTransform = target.toString();
     }
 
+    /**
+     * Translates the element to 'target' in a number of 'steps'
+     * when translated 'onDone' is called.
+     */
     animate(target : Trans, steps : number, interval : number,
 	    onDone? : (transf : Transformable) => any)
     : void {
@@ -232,6 +273,10 @@ class Transformable {
 // Video Player
 ////////////////////////////////
 
+/**
+ * A video player that can have multiple instances no matter what codec
+ * is used. (to work around a bug in Chrome)
+ */
 class VideoPlayer {
     static activePlayer : VideoPlayer;
     static video : HTMLVideoElement = (() => {
@@ -242,6 +287,10 @@ class VideoPlayer {
 	return ret;
     })();
 
+    /**
+     * Creates a new video player from a specific 'source' starting a 
+     * a specific 'time'.
+     */
     constructor(
 	public el : HTMLElement,
 	public source : string,
@@ -249,6 +298,9 @@ class VideoPlayer {
     ) {
     }
 
+    /**
+     * Creates a new video player from the current active video .
+     */
     static fromCurrentVideo(el : HTMLElement) {
 	assert(VideoPlayer.activePlayer, "oldPlayer");
 	var ret = new VideoPlayer(
@@ -260,7 +312,10 @@ class VideoPlayer {
 	});
 	return ret;
     }
-    
+
+    /**
+     * Makes a screenshot of the current video at its current position abd
+     * calls 'onSucces' when this happened successfully */
     static snapshot(onSucces)
     : void {
 	var video  = VideoPlayer.video;
@@ -289,7 +344,10 @@ class VideoPlayer {
 	this.el.style.backgroundRepeat = "no-repeat";
 	this.el.style.backgroundImage = "url("+url+")";
     }
-    
+
+    /**
+     * Deactivates this video player
+     */
     deactivate()
     : void {
 	assert(VideoPlayer.activePlayer === this,
@@ -305,6 +363,9 @@ class VideoPlayer {
 	});
     }
 
+    /**
+     * Activates this video player and calls 'onDone' when this is done.
+     */
     activate(onDone?)
     : void {
 	var video = VideoPlayer.video;
@@ -340,20 +401,32 @@ class VideoPlayer {
 	}
     }
 
+    /**
+     * Makes this player active and starts playing it.
+     */
     play(onDone?) {
 	this.activate(onDone);
 	VideoPlayer.video.play();
     }
 
+    /**
+     * Pauses the video.
+     */
     pause()
     : void {
 	VideoPlayer.video.pause();
     }
 
+    /**
+     * Skip to a certain position within the video.
+     */
     setTime(v : number) {
 	this.time = v;
     }
 
+    /**
+     * Called when this video gets deactivated.
+     */
     onDeactivated() {
     }
 }
@@ -362,6 +435,10 @@ class VideoPlayer {
 // Upload menu
 ////////////////////////////////
 
+/**
+ * A simple item within a menu that can be tapped and can have
+ * a label and image.
+ */
 class MenuItem {
 
     el : HTMLElement;
@@ -389,12 +466,19 @@ class MenuItem {
 	var mc = this.mc;
 	mc.add(new Hammer.Tap());
 
+        /**
+         * Hammer sometimes sees on tap as two, prevent this ...
+         */
 	mc.on("tap", ev => {
 	    withCooldown(500, () => fireNewEvent("tap", this.el))();
 	});
     }
 }
 
+/**
+ * A less simple menu item, one that can be removed from the menu by
+ * dragging it away.
+ */
 class RemovableMenuItem extends MenuItem {
 
     transf : Transformable;
@@ -431,7 +515,10 @@ class RemovableMenuItem extends MenuItem {
 	});
     }
 }
- 
+
+/**
+ * The menu item that represents a video in a playlist.
+ */
 class VideoItem extends RemovableMenuItem {
 
     constructor(
@@ -443,6 +530,9 @@ class VideoItem extends RemovableMenuItem {
     }
 }
 
+/**
+ * A simple menu with tappable items.
+ */  
 class Menu {
 
     items : MenuItem[] = [];
@@ -473,8 +563,15 @@ class Menu {
     }
 }
 
+/**
+ * A menu that holds a list of videos as a playlist. Those videos can be
+ * removed from the playlist by dragging them away.
+ */
 class VideoMenu extends Menu {
 
+    /**
+     * Creates a new videoMenu 
+     */
     constructor(el : HTMLElement) {
 	super(el);
 
@@ -493,7 +590,8 @@ class VideoMenu extends Menu {
 	};
 
 	var fileInput = createFileInput();
-	
+
+	// Add a menu item at the top of the menu uses to add videos.
 	var addVideoButton = (() => {
 	    var el = document.createElement("div");
 	    var item = new MenuItem("video toevoegen", "", this);
@@ -507,6 +605,9 @@ class VideoMenu extends Menu {
 	this.addItem(addVideoButton);
     }
 
+    /**
+     * Adds a video to the 'playlist'
+     */
     addVideo(
 	url : string,
 	label : string)
@@ -582,6 +683,9 @@ class VideoMenu extends Menu {
 // Fan
 ////////////////////////////////
 
+/**
+ * An element that holds a 'moment' of a video.
+ */
 class FanItem {
 
     transf : Transformable;
@@ -595,6 +699,9 @@ class FanItem {
     }
 }
 
+/**
+ * A FanItem that can be freely rotated, dragged and scaled and removed.
+ */
 class ManipulatableFanItem extends FanItem {
 
     mc : HammerManager;
@@ -636,6 +743,9 @@ class ManipulatableFanItem extends FanItem {
 	this.stopPlaying();
     }
 
+    /**
+     * Plays the moment of the item 
+     */
     startPlaying()
     {
 	var start = Math.max(0, this.startTime-(momentTime/2));
@@ -665,6 +775,9 @@ class ManipulatableFanItem extends FanItem {
     }
 }
 
+/**
+ * In this state the FanItem can removed from the Fan by dragging it away
+ */
 class RemovableFanItem extends FanItem {
 
     mc : HammerManager;
@@ -710,6 +823,9 @@ class RemovableFanItem extends FanItem {
     }
 }
 
+/**
+ * A Fan shaped holder of items representing 'moments' in a video
+ */
 class Fan {
 
     items : FanItem[] = [];
@@ -718,6 +834,10 @@ class Fan {
     _maxItems : number;
     _lineFunc : (length : number) => Trans[];
 
+    /**
+     * Creates a Fan
+     * TODO: Document this
+     */
     constructor(
 	public lineFunc : (length : number) => Trans[],
 	maxItems : number,
@@ -727,7 +847,7 @@ class Fan {
 	public animationSteps : number = 20) {
 	this._maxItems = maxItems;
     }
-    
+
     private placeItems(onPlaced? : () => any)
     :void {
 	var points = this.lineFunc(this.items.length);
@@ -745,7 +865,10 @@ class Fan {
 				});
 	});
     }
-    
+
+    /**
+     * Place a Fan item into this Fan
+     */
     addItem(item : FanItem)
     :void {
 	if (this.items.length < this.maxItems) {
@@ -794,7 +917,10 @@ class Fan {
 	newItem.onPlaced();
 	return true;
     }
-    
+
+    /**
+     * Line function is the function that describes the shape of the
+     * fan using a list of transformation */
     swapLineFunc(func : (length : number) => Trans[],
 		 onPlaced? : () => any)
     : void {
@@ -821,6 +947,9 @@ class Fan {
 
 }
 
+/**
+ * A line func in the form a circle
+ */
 function makeCircleFunc(radius : number,
 			itemProCircle : number,
 			angle : number = 0)
@@ -843,6 +972,9 @@ function makeCircleFunc(radius : number,
 // FanButton
 ////////////////////////////////
 
+/**
+ * The button to tap to add a moment to a fan.
+ */
 class FanButton {
 
     el : HTMLElement;
@@ -851,7 +983,11 @@ class FanButton {
     expanded : boolean = false;
     active : boolean = false;
     itemW : number;
-    
+
+    /**
+     * Creates a new button and its Fan shaped like a circle.
+     * TODO: Document this
+     */
     constructor(
 	public parent : HTMLElement,
 	public transFunc : (el : HTMLElement, parent : HTMLElement) => Trans,
@@ -981,6 +1117,11 @@ class FanButton {
 // Side bar
 ////////////////////////////////
 
+
+/**
+ * This class holds the side menu, it can be dragged open and dragged
+ * close.
+ */
 class SideBar {
 
     transf : Transformable;
@@ -1051,6 +1192,9 @@ class SideBar {
 // App
 ////////////////////////////////
 
+/**
+ * The app class ties everything together.
+ */
 class App {
 
     sideBar : SideBar;
@@ -1103,6 +1247,7 @@ var defaultMomentTime = 5;
 var momentTime = 5;
 var sideBar;
 
+// Put all elements together ...
 window.onload = () => {
 
     var el    = document.getElementById("sideBar");
